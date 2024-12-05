@@ -6,8 +6,12 @@ from core.services import ServiceManager, BackupService, ServiceStatus
 from core.services.service_registry import service_manager, services, initialize_services
 import os
 import traceback
+import sys
 
-app = FastAPI()
+# Configuração de logging detalhado
+print("=== INICIANDO APLICAÇÃO ===\n", file=sys.stderr)
+
+app = FastAPI(debug=True)  # Ativando modo debug
 
 # Configuração do CORS
 app.add_middleware(
@@ -32,24 +36,60 @@ class ServiceMetricsResponse(BaseModel):
 # Registra e inicia os serviços
 @app.on_event("startup")
 async def startup_event():
-    print("Iniciando evento de startup...")
+    print("=== EVENTO DE STARTUP INICIADO ===", file=sys.stderr)
     try:
-        print("Inicializando serviços...")
+        print("Inicializando serviços...", file=sys.stderr)
         initialize_services()
-        print("Serviços inicializados com sucesso")
+        print("Serviços inicializados com sucesso", file=sys.stderr)
     except Exception as e:
-        print(f"Erro durante inicialização: {e}")
-        print("Stacktrace:")
-        print(traceback.format_exc())
-        raise HTTPException(
-            status_code=500,
-            detail=f"Falha na inicialização: {str(e)}"
-        )
+        print(f"ERRO CRÍTICO durante inicialização: {e}", file=sys.stderr)
+        print("Stacktrace:", file=sys.stderr)
+        print(traceback.format_exc(), file=sys.stderr)
+        raise
+
+# Endpoint de health check com logs detalhados
+@app.get("/health")
+async def health_check():
+    print("=== HEALTH CHECK INICIADO ===", file=sys.stderr)
+    try:
+        # Verifica todos os serviços
+        all_healthy = True
+        service_status = {}
+
+        print("Verificando serviços...", file=sys.stderr)
+        for name, service in services.items():
+            print(f"Verificando serviço {name}...", file=sys.stderr)
+            try:
+                is_healthy = await service.health_check()
+                service_status[name] = "healthy" if is_healthy else "unhealthy"
+                if not is_healthy:
+                    all_healthy = False
+                print(f"Serviço {name}: {service_status[name]}", file=sys.stderr)
+            except Exception as e:
+                print(f"Erro ao verificar serviço {name}: {e}", file=sys.stderr)
+                print(traceback.format_exc(), file=sys.stderr)
+                service_status[name] = "error"
+                all_healthy = False
+
+        response = {
+            "status": "healthy" if all_healthy else "unhealthy",
+            "version": "1.0.0",
+            "environment": "development",
+            "services": service_status
+        }
+        print(f"Health check concluído: {response}", file=sys.stderr)
+        return response
+    except Exception as e:
+        print(f"ERRO CRÍTICO durante health check: {e}", file=sys.stderr)
+        print("Stacktrace:", file=sys.stderr)
+        print(traceback.format_exc(), file=sys.stderr)
+        raise
 
 # Endpoint para listar status dos serviços
 @app.get("/api/v1/services/status", response_model=List[ServiceStatusResponse])
 async def list_services_status():
     """Lista o status de todos os serviços"""
+    print("=== LISTANDO STATUS DOS SERVIÇOS ===", file=sys.stderr)
     response = []
     for service_info in service_manager.list_services().values():
         response.append({
@@ -64,6 +104,7 @@ async def list_services_status():
 @app.get("/api/v1/services/metrics", response_model=List[ServiceMetricsResponse])
 async def get_services_metrics():
     """Obtém métricas de todos os serviços"""
+    print("=== OBTENDO MÉTRICAS DOS SERVIÇOS ===", file=sys.stderr)
     response = []
     for name, service in services.items():
         metrics = await service.get_metrics()
@@ -77,6 +118,7 @@ async def get_services_metrics():
 @app.get("/api/v1/services/{service_name}/logs")
 async def get_service_logs(service_name: str, last_n: int = 100):
     """Obtém os últimos N logs de um serviço específico"""
+    print(f"=== OBTENDO LOGS DO SERVIÇO {service_name} ===", file=sys.stderr)
     logs = service_manager.get_service_logs(service_name, last_n)
     if not logs:
         raise HTTPException(
@@ -89,42 +131,8 @@ async def get_service_logs(service_name: str, last_n: int = 100):
 @app.get("/api/v1/services/logs")
 async def get_global_logs(last_n: int = 100):
     """Obtém os últimos N logs globais do gerenciador de serviços"""
+    print("=== OBTENDO LOGS GLOBAIS ===", file=sys.stderr)
     return {"logs": service_manager.get_global_logs(last_n)}
 
-# Endpoint de health check
-@app.get("/health")
-async def health_check():
-    """Verifica a saúde da aplicação"""
-    print("Executando health check...")
-    try:
-        # Verifica todos os serviços
-        all_healthy = True
-        service_status = {}
-
-        for name, service in services.items():
-            print(f"Verificando serviço {name}...")
-            is_healthy = await service.health_check()
-            service_status[name] = "healthy" if is_healthy else "unhealthy"
-            if not is_healthy:
-                all_healthy = False
-
-        response = {
-            "status": "healthy" if all_healthy else "unhealthy",
-            "version": "1.0.0",
-            "environment": "development",
-            "services": service_status
-        }
-        print(f"Health check concluído: {response}")
-        return response
-    except Exception as e:
-        print(f"Erro durante health check: {e}")
-        print("Stacktrace:")
-        print(traceback.format_exc())
-        raise
-
-# Registra as rotas dos módulos
-print("Registrando rotas...")
-from routers import backup
-app.include_router(backup.router, prefix="/api/v1/backup", tags=["backup"])
-print("Rotas registradas com sucesso")
+print("=== APLICAÇÃO CONFIGURADA COM SUCESSO ===\n", file=sys.stderr)
 

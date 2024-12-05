@@ -1,6 +1,34 @@
 INFO:     Will watch for changes in these directories: ['/root/project/nexus/nexus-ia/v1']
 INFO:     Uvicorn running on http://0.0.0.0:8001 (Press CTRL+C to quit)
-INFO:     Started reloader process [105884] using statreload
-INFO:     Started server process [105887]
+INFO:     Started reloader process [114031] using statreload
+=== INICIANDO APLICAÇÃO ===
+
+=== APLICAÇÃO CONFIGURADA COM SUCESSO ===
+
+INFO:     Started server process [114034]
 INFO:     Waiting for application startup.
-WARNING:  StatReload detected file change in 'github-control/app.py'. Reloading...
+INFO:     Will watch for changes in these directories: ['/root/project/nexus/nexus-ia/v1']
+INFO:     Uvicorn running on http://0.0.0.0:8001 (Press CTRL+C to quit)
+INFO:     Started reloader process [117075] using statreload
+Inicializando ServiceManager...
+ServiceManager inicializado com sucesso
+=== INICIANDO APLICAÇÃO ===
+
+=== APLICAÇÃO CONFIGURADA COM SUCESSO ===
+
+INFO:     Started server process [117079]
+INFO:     Waiting for application startup.
+=== EVENTO DE STARTUP INICIADO ===
+Inicializando serviços...
+Iniciando inicialização dos serviços...
+Criando instância do serviço de backup...
+Inicializando BackupService com diretório base: /data/backups
+Inicializando serviço base: backup
+Serviço base backup inicializado com sucesso
+BackupService inicializado
+Registrando serviço de backup...
+[ServiceManager] [2024-12-05 13:50:27] Tentando registrar serviço: backup
+[ServiceManager] [2024-12-05 13:50:27] Serviço backup registrado com sucesso
+Iniciando serviço de backup...
+[ServiceManager] [2024-12-05 13:50:27] Tentando iniciar serviço: backup
+[2024-12-05 13:50:27] [backup] Status alterado: stopped -> starting

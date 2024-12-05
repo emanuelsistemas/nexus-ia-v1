@@ -13,7 +13,7 @@
                 <i class="fas fa-sync-alt me-1"></i>
                 Atualizar
             </button>
-            <a href="{{ url_for('confirm_remove', repo_path=repo.path) }}" class="btn btn-sm btn-outline-danger ms-2">
+            <a href="{{ url_for('confirm_remove', repo_path=repo.path|urlencode) }}" class="btn btn-sm btn-outline-danger ms-2">
                 <i class="fas fa-trash-alt me-1"></i>
                 Remover
             </a>
