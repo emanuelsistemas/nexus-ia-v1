@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 import json
 import os
 import shutil
@@ -102,7 +102,7 @@ class BackupManager:
             print(f"Erro ao restaurar backup: {e}")
             return False
 
-    def list_backups(self, project_id: str) -> list[BackupMetadata]:
+    def list_backups(self, project_id: str) -> List[BackupMetadata]:
         """Lista todos os backups de um projeto"""
         project_dir = os.path.join(self.base_dir, project_id)
         if not os.path.exists(project_dir):

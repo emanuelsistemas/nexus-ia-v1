@@ -4,7 +4,7 @@ from typing import Optional, Dict, Any, List
 from datetime import datetime
 from core.backup.models import BackupType, BackupStatus, BackupMetadata
 from core.backup.manager import BackupManager
-from core.backup.logger import BackupLogger, LogLevel
+from core.backup.logger import BackupLogger, LogLevel, LogEntry
 
 router = APIRouter(prefix="/backup", tags=["backup"])
 

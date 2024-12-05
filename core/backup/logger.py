@@ -2,10 +2,10 @@ import os
 import json
 from datetime import datetime
 from enum import Enum
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from pydantic import BaseModel
 
-class LogLevel(Enum):
+class LogLevel(str, Enum):
     INFO = "INFO"
     WARNING = "WARNING"
     ERROR = "ERROR"
@@ -84,7 +84,7 @@ class BackupLogger:
                 start_date: Optional[datetime] = None,
                 end_date: Optional[datetime] = None,
                 level: Optional[LogLevel] = None,
-                backup_id: Optional[str] = None) -> list[LogEntry]:
+                backup_id: Optional[str] = None) -> List[LogEntry]:
         """Recupera logs com filtros"""
         logs = []
         

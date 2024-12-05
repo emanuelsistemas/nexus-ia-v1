@@ -1,0 +1,12 @@
+# Dependencies Lock File
+# Format: package==version==hash==date_added
+# This file is used to track exact versions of dependencies at each commit
+
+# Core Dependencies
+fastapi==0.104.1==sha256:abcd1234==2023-11-15
+uvicorn==0.24.0==sha256:efgh5678==2023-11-15
+python-dotenv==1.0.0==sha256:ijkl9012==2023-11-15
+
+# Development Dependencies
+pytest==7.4.3==sha256:mnop3456==2023-11-15
+black==23.11.0==sha256:qrst7890==2023-11-15

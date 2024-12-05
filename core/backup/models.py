@@ -1,16 +1,15 @@
-# Estrutura dos metadados de backup
 from datetime import datetime
 from enum import Enum
-from typing import Dict, Optional, List
+from typing import Dict, Optional, Any
 from pydantic import BaseModel
 
-class BackupType(Enum):
+class BackupType(str, Enum):
     FULL = "full"          # Backup completo do projeto
     INCREMENTAL = "inc"    # Apenas mudanças desde último backup
     SNAPSHOT = "snap"      # Estado atual do projeto
     CHECKPOINT = "check"   # Ponto específico (manual ou automático)
 
-class BackupStatus(Enum):
+class BackupStatus(str, Enum):
     PENDING = "pending"    # Backup iniciado
     RUNNING = "running"    # Em execução
     COMPLETED = "completed" # Finalizado com sucesso
@@ -32,5 +31,7 @@ class BackupMetadata(BaseModel):
     files_count: Optional[int] = None      # Número de arquivos
     error_message: Optional[str] = None    # Mensagem de erro se falhou
     tags: Dict[str, str] = {}             # Tags para categorização
-    extra: Dict[str, any] = {}            # Dados extras específicos do projeto
+    extra: Dict[str, Any] = {}            # Dados extras específicos do projeto
 
+    class Config:
+        use_enum_values = True

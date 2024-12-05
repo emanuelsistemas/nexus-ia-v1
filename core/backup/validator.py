@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Tuple
 from datetime import datetime
 import hashlib
 import json
@@ -18,7 +18,7 @@ class BackupValidator:
                 hash_md5.update(chunk)
         return hash_md5.hexdigest()
 
-    def validate_backup(self, backup_id: str, project_id: str) -> tuple[bool, Optional[str]]:
+    def validate_backup(self, backup_id: str, project_id: str) -> Tuple[bool, Optional[str]]:
         """Valida a integridade de um backup"""
         try:
             # Caminho do backup
@@ -48,7 +48,7 @@ class BackupValidator:
         except Exception as e:
             return False, str(e)
 
-    def validate_restore_point(self, backup_id: str, project_id: str) -> tuple[bool, Optional[str]]:
+    def validate_restore_point(self, backup_id: str, project_id: str) -> Tuple[bool, Optional[str]]:
         """Valida se um backup pode ser restaurado"""
         # Primeiro valida integridade
         is_valid, error = self.validate_backup(backup_id, project_id)
