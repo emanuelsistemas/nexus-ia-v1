@@ -1,6 +1,6 @@
 from datetime import datetime
 from enum import Enum
-from typing import Dict, Optional, Any
+from typing import Dict, Optional, Any, List
 from pydantic import BaseModel
 
 class BackupType(str, Enum):
@@ -17,6 +17,14 @@ class BackupStatus(str, Enum):
     VALIDATING = "validating" # Em validação
     RESTORING = "restoring"  # Em restauração
 
+class FileInfo(BaseModel):
+    """Informações de um arquivo no backup"""
+    path: str              # Caminho relativo do arquivo
+    size: int             # Tamanho em bytes
+    modified_at: datetime  # Data da última modificação
+    checksum: str         # Hash do arquivo
+    is_deleted: bool = False  # Se foi deletado (para incremental)
+
 class BackupMetadata(BaseModel):
     """Metadados do backup"""
     id: str                     # ID único do backup
@@ -32,6 +40,7 @@ class BackupMetadata(BaseModel):
     error_message: Optional[str] = None    # Mensagem de erro se falhou
     tags: Dict[str, str] = {}             # Tags para categorização
     extra: Dict[str, Any] = {}            # Dados extras específicos do projeto
+    files: List[FileInfo] = []            # Lista de arquivos no backup
 
     class Config:
         use_enum_values = True

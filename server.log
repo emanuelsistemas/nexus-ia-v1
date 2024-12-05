@@ -1,0 +1,11 @@
+Traceback (most recent call last):
+  File "main.py", line 3, in <module>
+    from api.v1 import backup
+  File "/root/project/nexus/nexus-ia/v1/api/v1/backup.py", line 5, in <module>
+    from core.backup.manager import BackupManager
+  File "/root/project/nexus/nexus-ia/v1/core/backup/manager.py", line 7, in <module>
+    from .validator import BackupValidator
+  File "/root/project/nexus/nexus-ia/v1/core/backup/validator.py", line 100
+    return False, f"Arquivo ausente: {file_info["path"]}"
+                                                 ^
+SyntaxError: invalid syntax
