@@ -254,42 +254,77 @@ def remove_repo():
 @app.route('/commit', methods=['POST'])
 def commit():
     try:
-        repo_path = request.form['repo_path']
-        commit_message = request.form['message']
+        app.logger.info("Iniciando processo de commit...")
+        repo_path = request.form.get('repo_path')
+        commit_message = request.form.get('message')
         
+        if not repo_path or not commit_message:
+            app.logger.error("Parâmetros inválidos: repo_path ou message não fornecidos")
+            return jsonify({
+                'success': False,
+                'error': 'Parâmetros inválidos'
+            }), 400
+        
+        app.logger.info(f"Abrindo repositório: {repo_path}")
         repo = git.Repo(repo_path)
         
         # Verifica se há alterações para commitar
+        app.logger.info("Verificando alterações...")
         if not repo.is_dirty(untracked_files=True):
-            return "Não há alterações para commitar", 400
+            app.logger.info("Nenhuma alteração encontrada para commit")
+            return jsonify({
+                'success': False,
+                'error': 'Não há alterações para commitar'
+            }), 400
         
         # Adiciona todas as alterações
+        app.logger.info("Adicionando alterações ao stage...")
         repo.git.add('.')
         
         # Cria o commit com a mensagem
+        app.logger.info("Criando commit...")
         date_br = datetime.now(pytz.timezone('America/Sao_Paulo')).strftime("%d/%m/%Y %H:%M:%S")
         full_message = f"{commit_message} - {date_br}"
         repo.index.commit(full_message)
         
+        # Verifica se tem remote configurado
+        if not repo.remotes:
+            app.logger.error("Nenhum remote configurado")
+            return jsonify({
+                'success': False,
+                'error': 'Nenhum remote configurado. Configure um remote primeiro.'
+            }), 400
+        
         try:
+            app.logger.info("Tentando push...")
             # Tenta fazer push
             repo.remote().push()
+            app.logger.info("Push realizado com sucesso!")
         except git.exc.GitCommandError as e:
+            app.logger.warning(f"Erro no push inicial: {str(e)}")
             if "no upstream branch" in str(e):
                 # Se não houver upstream branch, configura e tenta novamente
+                app.logger.info("Configurando upstream branch...")
                 current = repo.active_branch
                 repo.git.branch('--set-upstream-to', f'origin/{current.name}', current.name)
+                app.logger.info("Tentando push novamente...")
                 repo.remote().push()
+                app.logger.info("Push realizado com sucesso após configurar upstream!")
             else:
                 raise e
         
-        flash('Commit e push realizados com sucesso!', 'success')
-        return redirect(url_for('index'))
+        return jsonify({
+            'success': True,
+            'message': 'Commit e push realizados com sucesso!'
+        })
         
     except Exception as e:
         error_message = str(e)
-        flash(f'Erro ao realizar commit/push: {error_message}', 'error')
-        return redirect(url_for('index'))
+        app.logger.error(f"Erro durante commit/push: {error_message}")
+        return jsonify({
+            'success': False,
+            'error': f'Erro ao realizar commit/push: {error_message}'
+        }), 500
 
 @app.route('/get_changes', methods=['GET', 'POST'])
 def get_changes():

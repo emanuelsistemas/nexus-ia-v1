@@ -119,14 +119,14 @@
                 </div>
 
                 <!-- Formulário de Commit -->
-                <form class="commit-form" action="{{ url_for('commit') }}" method="post">
+                <form class="commit-form" onsubmit="handleCommit(event, '{{ repo.path }}', 'changes-{{ loop.index }}')">
                     <input type="hidden" name="repo_path" value="{{ repo.path }}">
                     <div class="form-group">
-                        <label for="commit_message">Mensagem do Commit:</label>
-                        <textarea class="form-control" id="commit_message" name="commit_message" rows="2" required></textarea>
+                        <label for="commit_message_{{ loop.index }}">Mensagem do Commit:</label>
+                        <textarea class="form-control" id="commit_message_{{ loop.index }}" name="message" rows="2" required></textarea>
                     </div>
                     <div class="mt-3">
-                        <button type="submit" class="btn btn-outline-primary">
+                        <button type="submit" class="btn btn-outline-primary" id="commit-btn-{{ loop.index }}">
                             <i class="fas fa-code-commit me-2"></i>Commit e Push
                         </button>
                     </div>
@@ -218,6 +218,73 @@
             .finally(() => {
                 changesDiv.classList.remove('loading');
             });
+        }
+
+        // Função para fazer commit e push
+        async function handleCommit(event, repoPath, changesId) {
+            event.preventDefault();
+            
+            const form = event.target;
+            const button = form.querySelector('button[type="submit"]');
+            const originalButtonHtml = button.innerHTML;
+            const message = form.querySelector('textarea[name="message"]').value;
+            
+            // Remove alertas anteriores
+            form.querySelectorAll('.alert').forEach(alert => alert.remove());
+            
+            // Desabilita o botão e mostra loading
+            button.disabled = true;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processando...';
+            
+            try {
+                const response = await fetch('/commit', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams({
+                        repo_path: repoPath,
+                        message: message
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok && result.success) {
+                    // Mostra mensagem de sucesso
+                    const alertDiv = document.createElement('div');
+                    alertDiv.className = 'alert alert-success alert-dismissible fade show mt-3';
+                    alertDiv.innerHTML = `
+                        <i class="fas fa-check-circle me-2"></i>
+                        ${result.message}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    `;
+                    form.appendChild(alertDiv);
+                    
+                    // Limpa o formulário
+                    form.reset();
+                    
+                    // Atualiza a lista de alterações
+                    updateChanges(repoPath, changesId);
+                } else {
+                    throw new Error(result.error || 'Erro desconhecido ao fazer commit');
+                }
+            } catch (error) {
+                console.error('Erro:', error);
+                // Mostra mensagem de erro
+                const alertDiv = document.createElement('div');
+                alertDiv.className = 'alert alert-danger alert-dismissible fade show mt-3';
+                alertDiv.innerHTML = `
+                    <i class="fas fa-exclamation-circle me-2"></i>
+                    ${error.message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                `;
+                form.appendChild(alertDiv);
+            } finally {
+                // Restaura o botão
+                button.disabled = false;
+                button.innerHTML = originalButtonHtml;
+            }
         }
 
         // Função para atualizar todos os repositórios

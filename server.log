@@ -7,7 +7,8 @@ INFO:     Started reloader process [114031] using statreload
 
 INFO:     Started server process [114034]
 INFO:     Waiting for application startup.
-INFO:     Will watch for changes in these directories: ['/root/project/nexus/nexus-ia/v1']
+INFO:     Stopping reloader process [114031]
+ectories: ['/root/project/nexus/nexus-ia/v1']
 INFO:     Uvicorn running on http://0.0.0.0:8001 (Press CTRL+C to quit)
 INFO:     Started reloader process [117075] using statreload
 Inicializando ServiceManager...

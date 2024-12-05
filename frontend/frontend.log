@@ -1,9 +1,20 @@
+Starting up http-server, serving ./
 
-> nexus-ia-frontend@1.0.0 dev
-> vite
+http-server version: 14.1.1
 
+http-server settings: 
+CORS: true
+Cache: 3600 seconds
+Connection Timeout: 120 seconds
+Directory Listings: visible
+AutoIndex: visible
+Serve GZIP Files: false
+Serve Brotli Files: false
+Default File Extension: none
 
-  VITE v4.5.5  ready in 207 ms
+Available on:
+  http://127.0.0.1:3000
+  http://5.161.236.34:3000
+Hit CTRL-C to stop the server
 
-  ➜  Local:   http://localhost:3000/
-  ➜  Network: http://5.161.236.34:3000/
+http-server stopped.
