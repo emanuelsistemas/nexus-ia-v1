@@ -80,9 +80,17 @@ function stopLogMonitoring(pid) {
 // Função para buscar os logs do serviço
 function fetchLogs(pid) {
     fetch(`/service/logs/${pid}`)
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const contentType = response.headers.get("content-type");
+            if (contentType && contentType.includes("application/json")) {
+                return response.json();
+            }
+            throw new TypeError("Oops, não recebemos JSON!");
+        })
         .then(data => {
-            console.log('Resposta do servidor:', data); // Debug
             if (data.success) {
                 updateLogs(pid, data.logs);
             } else {
@@ -95,6 +103,10 @@ function fetchLogs(pid) {
             console.error('Erro ao buscar logs:', error);
             const logsContent = document.getElementById(`logs-content-${pid}`);
             logsContent.innerHTML = `<div class="log-line log-error">Erro ao buscar logs: ${error.message}</div>`;
+            // Para erros de conexão, vamos parar o monitoramento
+            if (error instanceof TypeError) {
+                stopLogMonitoring(pid);
+            }
         });
 }
 

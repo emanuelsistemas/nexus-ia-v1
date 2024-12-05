@@ -4,6 +4,7 @@ from typing import Dict, Any, List, Optional
 from pydantic import BaseModel
 from core.services import ServiceManager, BackupService, ServiceStatus
 from core.services.service_registry import service_manager, services, initialize_services
+from routers import backup
 import os
 import traceback
 import sys
@@ -21,6 +22,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Inclui os routers
+app.include_router(backup.router, prefix="/api/v1/backup", tags=["backup"])
 
 # Modelos de resposta
 class ServiceStatusResponse(BaseModel):

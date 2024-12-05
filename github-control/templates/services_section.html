@@ -1,29 +1,45 @@
 <!-- Seção de Serviços -->
-<div class="services-section mb-4">
-    <div class="d-flex justify-content-between align-items-center mb-2">
-        <h6>
-            <i class="fas fa-server me-2"></i>
-            Serviços Detectados
-            {% if repo.detected_types %}
-                <span class="badge bg-info ms-2">{{ repo.detected_types|join(', ') }}</span>
-            {% endif %}
-        </h6>
-        <div>
-            <button class="btn btn-sm btn-outline-secondary" onclick="refreshAllRepos()">
-                <i class="fas fa-sync-alt me-1"></i>
-                Atualizar
-            </button>
-            <a href="{{ url_for('confirm_remove', repo_path=repo.path|urlencode) }}" class="btn btn-sm btn-outline-danger ms-2">
-                <i class="fas fa-trash-alt me-1"></i>
-                Remover
-            </a>
+<div class="card mb-3">
+    <div class="card-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+                <i class="fas fa-cogs me-2"></i>
+                Serviços
+            </h5>
+            <div>
+                <button class="btn btn-sm btn-outline-secondary" onclick="toggleAllServices()">
+                    <i class="fas fa-expand-alt me-1"></i>
+                    Expandir/Recolher Todos
+                </button>
+                <button class="btn btn-sm btn-outline-secondary" onclick="refreshAllRepos()">
+                    <i class="fas fa-sync-alt me-1"></i>
+                    Atualizar
+                </button>
+                <a href="{{ url_for('confirm_remove', repo_path=repo.path|urlencode) }}" class="btn btn-sm btn-outline-danger ms-2">
+                    <i class="fas fa-trash-alt me-1"></i>
+                    Remover
+                </a>
+            </div>
         </div>
     </div>
-    
-    {% if repo.services %}
-        <div class="services-list">
-            {% for service in repo.services %}
-                <div class="service-item">
+    <div class="card-body">
+        {% if repo.services %}
+        <div class="service-group mb-3">
+            <div class="service-header d-flex justify-content-between align-items-center" onclick="toggleServiceGroup('{{ repo.path }}')">
+                <h6 class="mb-0">
+                    <i class="fas fa-folder me-2"></i>
+                    <span class="repo-name">{{ repo.name }}</span>
+                </h6>
+                <div>
+                    <button class="btn btn-sm btn-link text-decoration-none" onclick="copyPath('{{ repo.path }}'); event.stopPropagation();">
+                        <i class="fas fa-copy"></i>
+                    </button>
+                    <i class="fas fa-chevron-down toggle-icon" id="toggle-icon-{{ repo.path|replace('/', '-') }}"></i>
+                </div>
+            </div>
+            <div class="service-content collapse" id="service-group-{{ repo.path|replace('/', '-') }}">
+                {% for service in repo.services %}
+                <div class="service-item mt-3">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             {% if service.type %}
@@ -123,14 +139,16 @@
                         </div>
                     {% endif %}
                 </div>
-            {% endfor %}
+                {% endfor %}
+            </div>
         </div>
-    {% else %}
-        <div class="text-muted text-center p-3 bg-dark rounded">
-            <i class="fas fa-info-circle me-2"></i>
-            Nenhum serviço detectado
-        </div>
-    {% endif %}
+        {% else %}
+            <div class="text-muted text-center p-3 bg-dark rounded">
+                <i class="fas fa-info-circle me-2"></i>
+                Nenhum serviço detectado
+            </div>
+        {% endif %}
+    </div>
 </div>
 
 <!-- Modal de Confirmação de Remoção -->
@@ -242,5 +260,40 @@ function controlService(servicePath, action) {
     
     document.body.appendChild(form);
     form.submit();
+}
+</script>
+
+<script>
+function toggleAllServices() {
+    const serviceGroups = document.querySelectorAll('.service-group');
+    // Verifica se todos estão expandidos para decidir se vamos expandir ou recolher
+    const allExpanded = Array.from(serviceGroups).every(group => 
+        !group.querySelector('.service-content').classList.contains('collapse')
+    );
+    
+    serviceGroups.forEach(group => {
+        const serviceContent = group.querySelector('.service-content');
+        const toggleIcon = group.querySelector('.toggle-icon');
+        if (allExpanded) {
+            serviceContent.classList.add('collapse');
+            toggleIcon.style.transform = 'rotate(0deg)';
+        } else {
+            serviceContent.classList.remove('collapse');
+            toggleIcon.style.transform = 'rotate(180deg)';
+        }
+    });
+}
+
+function toggleServiceGroup(repoPath) {
+    const serviceGroup = document.querySelector(`#service-group-${repoPath.replace(/[\/\\]/g, '-')}`);
+    const toggleIcon = document.querySelector(`#toggle-icon-${repoPath.replace(/[\/\\]/g, '-')}`);
+    
+    if (serviceGroup.classList.contains('collapse')) {
+        serviceGroup.classList.remove('collapse');
+        toggleIcon.style.transform = 'rotate(180deg)';
+    } else {
+        serviceGroup.classList.add('collapse');
+        toggleIcon.style.transform = 'rotate(0deg)';
+    }
 }
 </script>

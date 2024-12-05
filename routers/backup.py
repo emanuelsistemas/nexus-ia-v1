@@ -1,182 +1,138 @@
 from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
 from typing import List, Optional
-from core.backup.models import BackupMetadata, BackupType, CompressionType
-from core.services import ServiceStatus
-from core.services.service_registry import service_manager, services
+from datetime import datetime
+from core.services.service_registry import services
+import traceback
 
 router = APIRouter()
 
-@router.post("/create")
-async def create_backup(
-    project_id: str,
-    data_dir: str,
-    backup_type: BackupType = BackupType.FULL,
-    compression_type: CompressionType = CompressionType.ZLIB,
-    compression_level: int = 6,
-    tags: Optional[dict] = None,
-    extra: Optional[dict] = None
-) -> BackupMetadata:
+class BackupRequest(BaseModel):
+    """Requisição para criar um backup"""
+    project_id: str
+    source_dir: str
+    description: Optional[str] = ""
+
+class BackupResponse(BaseModel):
+    """Resposta com informações do backup"""
+    id: str
+    project_id: str
+    timestamp: datetime
+    description: str
+    size_bytes: int
+    status: str
+    error_message: Optional[str] = None
+
+@router.post("/create", response_model=BackupResponse)
+async def create_backup(request: BackupRequest):
     """Cria um novo backup"""
-    # Verifica se o serviço está disponível
-    backup_service = services.get("backup")
-    if not backup_service or not backup_service.manager:
-        raise HTTPException(
-            status_code=503,
-            detail="Serviço de backup não disponível"
-        )
-
-    # Verifica status do serviço
-    service_info = service_manager.get_service_status("backup")
-    if service_info != ServiceStatus.RUNNING:
-        raise HTTPException(
-            status_code=503,
-            detail=f"Serviço de backup não está rodando (status: {service_info})"
-        )
-
     try:
-        return backup_service.manager.create_backup(
-            project_id=project_id,
-            backup_type=backup_type,
-            data_dir=data_dir,
-            compression_type=compression_type,
-            compression_level=compression_level,
-            tags=tags,
-            extra=extra
+        print(f"Recebida requisição para criar backup do projeto {request.project_id}")
+        backup_service = services.get("backup")
+        if not backup_service:
+            raise HTTPException(status_code=503, detail="Serviço de backup não disponível")
+
+        backup = backup_service.manager.create_backup(
+            project_id=request.project_id,
+            source_dir=request.source_dir,
+            description=request.description
         )
+
+        return BackupResponse(
+            id=backup.id,
+            project_id=backup.project_id,
+            timestamp=backup.timestamp,
+            description=backup.description,
+            size_bytes=backup.size_bytes,
+            status=backup.status,
+            error_message=backup.error_message
+        )
+
     except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Erro ao criar backup: {str(e)}"
-        )
+        print(f"Erro ao criar backup: {e}")
+        print(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/list/{project_id}", response_model=List[BackupResponse])
+async def list_backups(project_id: str):
+    """Lista todos os backups de um projeto"""
+    try:
+        print(f"Recebida requisição para listar backups do projeto {project_id}")
+        backup_service = services.get("backup")
+        if not backup_service:
+            raise HTTPException(status_code=503, detail="Serviço de backup não disponível")
+
+        backups = backup_service.manager.list_backups(project_id)
+        return [
+            BackupResponse(
+                id=backup.id,
+                project_id=backup.project_id,
+                timestamp=backup.timestamp,
+                description=backup.description,
+                size_bytes=backup.size_bytes,
+                status=backup.status,
+                error_message=backup.error_message
+            )
+            for backup in backups
+        ]
+
+    except Exception as e:
+        print(f"Erro ao listar backups: {e}")
+        print(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=str(e))
+
+class RestoreRequest(BaseModel):
+    """Requisição para restaurar um backup"""
+    project_id: str
+    backup_id: str
+    target_dir: str
 
 @router.post("/restore")
-async def restore_backup(
-    project_id: str,
-    backup_id: str,
-    restore_dir: str
-) -> bool:
+async def restore_backup(request: RestoreRequest):
     """Restaura um backup"""
-    # Verifica se o serviço está disponível
-    backup_service = services.get("backup")
-    if not backup_service or not backup_service.manager:
-        raise HTTPException(
-            status_code=503,
-            detail="Serviço de backup não disponível"
-        )
-
-    # Verifica status do serviço
-    service_info = service_manager.get_service_status("backup")
-    if service_info != ServiceStatus.RUNNING:
-        raise HTTPException(
-            status_code=503,
-            detail=f"Serviço de backup não está rodando (status: {service_info})"
-        )
-
     try:
-        return backup_service.manager.restore_backup(
-            backup_id=backup_id,
+        print(f"Recebida requisição para restaurar backup {request.backup_id} do projeto {request.project_id}")
+        backup_service = services.get("backup")
+        if not backup_service:
+            raise HTTPException(status_code=503, detail="Serviço de backup não disponível")
+
+        success = backup_service.manager.restore_backup(
+            project_id=request.project_id,
+            backup_id=request.backup_id,
+            target_dir=request.target_dir
+        )
+
+        if not success:
+            raise HTTPException(status_code=404, detail="Backup não encontrado ou erro ao restaurar")
+
+        return {"message": "Backup restaurado com sucesso"}
+
+    except Exception as e:
+        print(f"Erro ao restaurar backup: {e}")
+        print(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.delete("/{project_id}/{backup_id}")
+async def delete_backup(project_id: str, backup_id: str):
+    """Deleta um backup"""
+    try:
+        print(f"Recebida requisição para deletar backup {backup_id} do projeto {project_id}")
+        backup_service = services.get("backup")
+        if not backup_service:
+            raise HTTPException(status_code=503, detail="Serviço de backup não disponível")
+
+        success = backup_service.manager.delete_backup(
             project_id=project_id,
-            restore_dir=restore_dir
+            backup_id=backup_id
         )
+
+        if not success:
+            raise HTTPException(status_code=404, detail="Backup não encontrado ou erro ao deletar")
+
+        return {"message": "Backup deletado com sucesso"}
+
     except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Erro ao restaurar backup: {str(e)}"
-        )
-
-@router.get("/list/{project_id}", response_model=List[BackupMetadata])
-async def list_backups(project_id: str) -> List[BackupMetadata]:
-    """Lista todos os backups de um projeto"""
-    # Verifica se o serviço está disponível
-    backup_service = services.get("backup")
-    if not backup_service or not backup_service.manager:
-        raise HTTPException(
-            status_code=503,
-            detail="Serviço de backup não disponível"
-        )
-
-    # Verifica status do serviço
-    service_info = service_manager.get_service_status("backup")
-    if service_info != ServiceStatus.RUNNING:
-        raise HTTPException(
-            status_code=503,
-            detail=f"Serviço de backup não está rodando (status: {service_info})"
-        )
-
-    try:
-        return backup_service.manager.list_backups(project_id)
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Erro ao listar backups: {str(e)}"
-        )
-
-@router.get("/info/{project_id}/{backup_id}", response_model=Optional[BackupMetadata])
-async def get_backup_info(project_id: str, backup_id: str) -> Optional[BackupMetadata]:
-    """Obtém informações de um backup específico"""
-    # Verifica se o serviço está disponível
-    backup_service = services.get("backup")
-    if not backup_service or not backup_service.manager:
-        raise HTTPException(
-            status_code=503,
-            detail="Serviço de backup não disponível"
-        )
-
-    # Verifica status do serviço
-    service_info = service_manager.get_service_status("backup")
-    if service_info != ServiceStatus.RUNNING:
-        raise HTTPException(
-            status_code=503,
-            detail=f"Serviço de backup não está rodando (status: {service_info})"
-        )
-
-    try:
-        info = backup_service.manager.get_backup_info(backup_id, project_id)
-        if not info:
-            raise HTTPException(
-                status_code=404,
-                detail=f"Backup {backup_id} não encontrado"
-            )
-        return info
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Erro ao obter informações do backup: {str(e)}"
-        )
-
-@router.delete("/delete/{project_id}/{backup_id}")
-async def delete_backup(project_id: str, backup_id: str) -> bool:
-    """Remove um backup"""
-    # Verifica se o serviço está disponível
-    backup_service = services.get("backup")
-    if not backup_service or not backup_service.manager:
-        raise HTTPException(
-            status_code=503,
-            detail="Serviço de backup não disponível"
-        )
-
-    # Verifica status do serviço
-    service_info = service_manager.get_service_status("backup")
-    if service_info != ServiceStatus.RUNNING:
-        raise HTTPException(
-            status_code=503,
-            detail=f"Serviço de backup não está rodando (status: {service_info})"
-        )
-
-    try:
-        if not backup_service.manager.delete_backup(backup_id, project_id):
-            raise HTTPException(
-                status_code=404,
-                detail=f"Backup {backup_id} não encontrado"
-            )
-        return True
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Erro ao deletar backup: {str(e)}"
-        )
+        print(f"Erro ao deletar backup: {e}")
+        print(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=str(e))
 

@@ -182,6 +182,8 @@ def configure_repo():
 
 @app.route('/confirm_remove/<path:repo_path>')
 def confirm_remove(repo_path):
+    # Decodifica o caminho do repositório
+    repo_path = os.path.abspath(repo_path)
     return render_template('confirm_remove.html', repo_path=repo_path)
 
 @app.route('/remove_repo', methods=['POST'])
@@ -399,7 +401,7 @@ def get_service_logs(pid):
         app.logger.error(f"Erro ao obter logs: {str(e)}")
         return jsonify({
             'success': False,
-            'error': str(e)
+            'error': f'Erro ao obter logs: {str(e)}'
         })
 
 @app.route('/control_service', methods=['POST'])
