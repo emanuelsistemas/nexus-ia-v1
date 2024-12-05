@@ -9,13 +9,13 @@ sleep 2
 echo "=== Iniciando servidor ==="
 cd /root/project/nexus/nexus-ia/v1
 source venv/bin/activate
-PYTHONPATH=/root/project/nexus/nexus-ia/v1 python main.py > server.log 2>&1 &
+PYTHONPATH=/root/project/nexus/nexus-ia/v1 uvicorn main:app --host 0.0.0.0 --port 8001 --reload > server.log 2>&1 &
 
 echo "=== Aguardando servidor iniciar ==="
 sleep 5
 
 echo "=== Verificando status do servidor ==="
-if pgrep -f "python main.py" > /dev/null; then
+if pgrep -f "uvicorn" > /dev/null; then
     echo "Servidor iniciado com sucesso!"
     echo "=== Últimas 10 linhas do log ==="
     tail -n 10 server.log

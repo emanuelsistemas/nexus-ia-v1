@@ -9,6 +9,7 @@ import socket
 import subprocess
 import re
 import glob
+import time
 
 app = Flask(__name__)
 app.secret_key = 'sua_chave_secreta_aqui'
@@ -103,6 +104,25 @@ def get_service_info(repo_path):
     
     return services
 
+def detect_service_type(service_path):
+    """Detecta o tipo de serviço e retorna o comando para iniciá-lo"""
+    if os.path.exists(os.path.join(service_path, 'package.json')):
+        return 'Node.js', ['npm', 'start']
+    elif os.path.exists(os.path.join(service_path, 'requirements.txt')):
+        # Procura por um arquivo Python que possa ser o principal
+        main_files = ['app.py', 'main.py', 'run.py', 'server.py']
+        for file in main_files:
+            if os.path.exists(os.path.join(service_path, file)):
+                return 'Python', ['python3', file]
+        return 'Python', None
+    elif os.path.exists(os.path.join(service_path, 'pom.xml')):
+        return 'Java', ['mvn', 'spring-boot:run']
+    elif os.path.exists(os.path.join(service_path, 'build.gradle')):
+        return 'Java', ['gradle', 'bootRun']
+    elif os.path.exists(os.path.join(service_path, 'Dockerfile')):
+        return 'Docker', ['docker-compose', 'up']
+    return None, None
+
 base_path = '/root'
 repos_cache = {}
 
@@ -160,22 +180,26 @@ def configure_repo():
     
     return redirect(url_for('index'))
 
+@app.route('/confirm_remove/<path:repo_path>')
+def confirm_remove(repo_path):
+    return render_template('confirm_remove.html', repo_path=repo_path)
+
 @app.route('/remove_repo', methods=['POST'])
 def remove_repo():
-    repo_path = request.form.get('repo_path')
-    stop_services = request.form.get('stop_services') == 'true'
-    delete_files = request.form.get('delete_files') == 'true'
-    
-    if not repo_path:
-        flash('Caminho do repositório não fornecido', 'error')
-        return redirect(url_for('index'))
-    
     try:
+        repo_path = request.form.get('repo_path')
+        remove_option = request.form.get('remove_option')
+        
+        if not repo_path or not remove_option:
+            flash('Parâmetros inválidos', 'error')
+            return redirect(url_for('index'))
+        
+        # Carrega a configuração atual
         config = load_config()
         
-        # Se solicitado, tenta parar os serviços em execução
-        if stop_services:
-            services = get_service_info(repo_path)
+        # Para qualquer opção, primeiro para os serviços em execução
+        services = get_service_info(repo_path)
+        if services:
             for service in services:
                 if service.get('pid'):
                     try:
@@ -185,8 +209,8 @@ def remove_repo():
                     except (psutil.NoSuchProcess, psutil.TimeoutExpired):
                         pass  # Processo já não existe ou não terminou a tempo
         
-        # Remove apenas os arquivos do Git se solicitado
-        if delete_files:
+        # Remove arquivos Git se necessário
+        if remove_option in ['git_only', 'completely']:
             try:
                 import shutil
                 git_dir = os.path.join(repo_path, '.git')
@@ -204,24 +228,26 @@ def remove_repo():
                 flash(f'Erro ao excluir arquivos do Git: {str(e)}', 'error')
                 return redirect(url_for('index'))
         
-        # Remove o repositório da configuração
-        if 'excluded_repos' not in config:
-            config['excluded_repos'] = []
+        # Remove da lista de configuração se necessário
+        if remove_option in ['list_only', 'completely']:
+            if 'excluded_repos' not in config:
+                config['excluded_repos'] = []
+            
+            if repo_path not in config['excluded_repos']:
+                config['excluded_repos'].append(repo_path)
+            
+            # Remove a URL remota se existir
+            if 'remote_urls' in config and repo_path in config['remote_urls']:
+                del config['remote_urls'][repo_path]
+            
+            save_config(config)
         
-        if repo_path not in config['excluded_repos']:
-            config['excluded_repos'].append(repo_path)
-        
-        # Remove a URL remota se existir
-        if 'remote_urls' in config and repo_path in config['remote_urls']:
-            del config['remote_urls'][repo_path]
-        
-        save_config(config)
-        flash('Repositório Git removido com sucesso', 'success')
+        flash('Repositório removido com sucesso', 'success')
+        return redirect(url_for('index'))
         
     except Exception as e:
-        flash(f'Erro ao remover repositório: {str(e)}', 'error')
-    
-    return redirect(url_for('index'))
+        flash(f'Erro ao processar solicitação: {str(e)}', 'error')
+        return redirect(url_for('index'))
 
 @app.route('/commit', methods=['POST'])
 def commit():
@@ -375,6 +401,74 @@ def get_service_logs(pid):
             'success': False,
             'error': str(e)
         })
+
+@app.route('/control_service', methods=['POST'])
+def control_service():
+    service_path = request.form.get('service_path')
+    action = request.form.get('action')
+    
+    if not service_path or not action:
+        flash('Parâmetros inválidos', 'error')
+        return redirect(url_for('index'))
+    
+    try:
+        # Obtém informações do serviço atual
+        services = get_service_info(service_path)
+        current_service = next((s for s in services if s.get('path') == service_path), None)
+        
+        if action == 'stop' and current_service and current_service.get('pid'):
+            # Para o serviço
+            try:
+                process = psutil.Process(current_service['pid'])
+                process.terminate()
+                process.wait(timeout=5)
+                flash('Serviço parado com sucesso', 'success')
+            except (psutil.NoSuchProcess, psutil.TimeoutExpired):
+                flash('Erro ao parar o serviço', 'error')
+        
+        elif action in ['start', 'restart']:
+            # Se for restart, primeiro para o serviço atual
+            if action == 'restart' and current_service and current_service.get('pid'):
+                try:
+                    process = psutil.Process(current_service['pid'])
+                    process.terminate()
+                    process.wait(timeout=5)
+                except (psutil.NoSuchProcess, psutil.TimeoutExpired):
+                    pass
+            
+            # Detecta o tipo de serviço e obtém o comando para iniciá-lo
+            service_type, start_command = detect_service_type(service_path)
+            
+            if not start_command:
+                flash(f'Não foi possível determinar como iniciar o serviço do tipo {service_type}', 'error')
+                return redirect(url_for('index'))
+            
+            try:
+                # Inicia o serviço
+                process = subprocess.Popen(
+                    start_command,
+                    cwd=service_path,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    universal_newlines=True
+                )
+                
+                # Aguarda um pouco para ver se o processo inicia corretamente
+                time.sleep(2)
+                if process.poll() is None:  # Se ainda está rodando
+                    flash(f'Serviço {"reiniciado" if action == "restart" else "iniciado"} com sucesso', 'success')
+                else:
+                    stdout, stderr = process.communicate()
+                    error_msg = stderr.strip() or stdout.strip()
+                    flash(f'Erro ao iniciar serviço: {error_msg}', 'error')
+            
+            except Exception as e:
+                flash(f'Erro ao iniciar serviço: {str(e)}', 'error')
+    
+    except Exception as e:
+        flash(f'Erro ao controlar serviço: {str(e)}', 'error')
+    
+    return redirect(url_for('index'))
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0')

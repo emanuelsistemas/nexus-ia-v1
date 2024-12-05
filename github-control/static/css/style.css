@@ -589,3 +589,12 @@ textarea.form-control:focus {
 .log-line.info {
     color: var(--bs-info);
 }
+
+/* Remove todas as customizações anteriores do modal */
+.modal-open {
+    overflow: hidden;
+}
+
+.modal-backdrop {
+    opacity: 0.5;
+}

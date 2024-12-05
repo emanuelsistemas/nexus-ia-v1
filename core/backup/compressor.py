@@ -212,7 +212,7 @@ class BackupCompressor:
                         source_path = os.path.join(root, file)
                         rel_path = os.path.relpath(source_path, source_dir)
                         # Remove .compressed do nome do arquivo
-                        base_path = rel_path[:-10]  # Remove .compressed
+                        base_path = os.path.splitext(rel_path)[0]  # Remove .compressed
                         dest_path = os.path.join(dest_dir, base_path)
 
                         print(f"Processando arquivo {source_path}")

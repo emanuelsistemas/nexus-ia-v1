@@ -1,7 +1,6 @@
 INFO:     Will watch for changes in these directories: ['/root/project/nexus/nexus-ia/v1']
 INFO:     Uvicorn running on http://0.0.0.0:8001 (Press CTRL+C to quit)
-INFO:     Started reloader process [97365] using statreload
-INFO:     Started server process [97372]
+INFO:     Started reloader process [105884] using statreload
+INFO:     Started server process [105887]
 INFO:     Waiting for application startup.
-INFO:     Application startup complete.
-INFO:     127.0.0.1:55758 - "GET /health HTTP/1.1" 200 OK
+WARNING:  StatReload detected file change in 'github-control/app.py'. Reloading...

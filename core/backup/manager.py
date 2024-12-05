@@ -212,10 +212,12 @@ class BackupManager:
                 else:
                     # Copia arquivo novo/modificado
                     src_path = os.path.join(data_dir, file_info.path)
-                    if metadata.compression and not temp_dir:
-                        src_path += ".compressed"
                     print(f"Restaurando arquivo {src_path} para {dest_path}")
                     self._copy_file(src_path, dest_path)
+
+            # Limpa diretório temporário
+            if temp_dir and os.path.exists(temp_dir):
+                shutil.rmtree(temp_dir)
 
             print("Restauração concluída com sucesso")
             return True

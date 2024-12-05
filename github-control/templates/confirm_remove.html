@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Confirmar Remoção</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+</head>
+<body class="bg-light">
+    <div class="container mt-4">
+        <div class="card">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Confirmar Remoção
+                </h5>
+            </div>
+            <div class="card-body">
+                <h6 class="card-subtitle mb-3 text-muted">
+                    <i class="fas fa-folder me-2"></i>
+                    {{ repo_path }}
+                </h6>
+
+                <p class="card-text">Como você deseja remover este repositório?</p>
+
+                <form action="{{ url_for('remove_repo') }}" method="POST">
+                    <input type="hidden" name="repo_path" value="{{ repo_path }}">
+                    
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="radio" name="remove_option" id="listOnly" value="list_only" required>
+                        <label class="form-check-label" for="listOnly">
+                            <strong>Remover apenas da lista</strong>
+                            <div class="text-muted small">Mantém todos os arquivos, apenas remove da lista de repositórios</div>
+                        </label>
+                    </div>
+
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="radio" name="remove_option" id="gitOnly" value="git_only">
+                        <label class="form-check-label" for="gitOnly">
+                            <strong>Remover arquivos Git</strong>
+                            <div class="text-muted small">Remove os arquivos Git (.git, .gitignore, etc) mas mantém o diretório visível</div>
+                        </label>
+                    </div>
+
+                    <div class="form-check mb-4">
+                        <input class="form-check-input" type="radio" name="remove_option" id="completely" value="completely">
+                        <label class="form-check-label" for="completely">
+                            <strong>Remover completamente</strong>
+                            <div class="text-muted small">Remove os arquivos Git e remove da lista de repositórios</div>
+                        </label>
+                    </div>
+
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-circle me-2"></i>
+                        Esta ação não pode ser desfeita. Por favor, confirme sua escolha.
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2">
+                        <a href="{{ url_for('index') }}" class="btn btn-secondary">
+                            <i class="fas fa-times me-2"></i>
+                            Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-danger">
+                            <i class="fas fa-trash-alt me-2"></i>
+                            Confirmar Remoção
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
+                {% for category, message in messages %}
+                    <div class="toast show bg-{{ 'success' if category == 'success' else 'danger' }} text-white" role="alert" aria-live="assertive" aria-atomic="true">
+                        <div class="toast-header">
+                            <i class="fas fa-{{ 'check' if category == 'success' else 'exclamation' }}-circle me-2"></i>
+                            <strong class="me-auto">{{ 'Sucesso' if category == 'success' else 'Erro' }}</strong>
+                            <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+                        </div>
+                        <div class="toast-body">
+                            {{ message }}
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <script>
+        // Auto-hide toasts after 3 seconds
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(function() {
+                document.querySelectorAll('.toast').forEach(function(toast) {
+                    toast.classList.remove('show');
+                });
+            }, 3000);
+        });
+    </script>
+</body>
+</html>

@@ -70,7 +70,7 @@
                         </small>
                     </div>
                     <div class="repo-actions">
-                        <button class="btn btn-outline-danger btn-sm" onclick="removeRepo('{{ repo.path }}')" title="Remover Repositório">
+                        <button class="btn btn-outline-danger btn-sm" onclick="confirmRemoveRepo('{{ repo.path }}')" title="Remover Repositório">
                             <i class="fas fa-trash-alt"></i>
                         </button>
                         <button class="btn btn-outline-primary btn-sm" onclick="updateChanges('{{ repo.path }}', 'changes-{{ loop.index }}')" title="Atualizar">
@@ -143,97 +143,117 @@
         // Função para atualizar a lista de alterações
         function updateChanges(repoPath, elementId) {
             const changesDiv = document.getElementById(elementId);
-            changesDiv.innerHTML = '<div class="loading text-center"><i class="fas fa-spinner fa-spin"></i> Carregando alterações...</div>';
+            if (!changesDiv) return;
             
-            fetch('/get_changes?repo_path=' + encodeURIComponent(repoPath))
-                .then(response => response.json())
-                .then(data => {
+            // Adiciona classe de carregamento
+            changesDiv.classList.add('loading');
+            
+            fetch('/get_changes', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    repo_path: repoPath
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    changesDiv.innerHTML = '';
+                    
                     if (data.changes.length === 0) {
-                        changesDiv.innerHTML = '<div class="text-muted text-center">Nenhuma alteração pendente</div>';
+                        changesDiv.innerHTML = '<p class="text-muted mb-0"><i class="fas fa-check me-2"></i>Nenhuma alteração pendente</p>';
                         return;
                     }
                     
-                    let html = '';
+                    const list = document.createElement('ul');
+                    list.className = 'list-unstyled mb-0';
+                    
                     data.changes.forEach(change => {
-                        const status = change.split(' ')[0];
-                        const file = change.split(' ').slice(1).join(' ');
+                        const item = document.createElement('li');
+                        item.className = 'change-item';
                         
-                        let statusClass = '';
-                        let statusIcon = '';
-                        
-                        switch(status) {
-                            case 'M':
-                                statusClass = 'modified';
-                                statusIcon = 'pen-to-square';
-                                break;
-                            case 'A':
-                                statusClass = 'new';
-                                statusIcon = 'plus';
-                                break;
-                            case 'D':
-                                statusClass = 'deleted';
-                                statusIcon = 'trash';
-                                break;
-                            default:
-                                statusClass = 'untracked';
-                                statusIcon = 'question';
+                        const icon = document.createElement('i');
+                        if (change.startsWith('M ')) {
+                            icon.className = 'fas fa-pencil-alt text-warning me-2';
+                            change = change.substring(2);
+                        } else if (change.startsWith('A ')) {
+                            icon.className = 'fas fa-plus-circle text-success me-2';
+                            change = change.substring(2);
+                        } else if (change.startsWith('D ')) {
+                            icon.className = 'fas fa-minus-circle text-danger me-2';
+                            change = change.substring(2);
+                        } else if (change.startsWith('R ')) {
+                            icon.className = 'fas fa-exchange-alt text-info me-2';
+                            change = change.substring(2);
+                        } else {
+                            icon.className = 'fas fa-question-circle text-muted me-2';
                         }
                         
-                        html += `
-                            <div class="file-status ${statusClass}">
-                                <i class="fas fa-${statusIcon} status-icon ${statusClass}"></i>
-                                ${file}
-                            </div>
-                        `;
+                        item.appendChild(icon);
+                        item.appendChild(document.createTextNode(change));
+                        list.appendChild(item);
                     });
                     
-                    changesDiv.innerHTML = html;
-                })
-                .catch(error => {
-                    changesDiv.innerHTML = '<div class="text-danger">Erro ao carregar alterações</div>';
-                    console.error('Error:', error);
-                });
+                    changesDiv.appendChild(list);
+                } else {
+                    changesDiv.innerHTML = `
+                        <div class="alert alert-danger mb-0">
+                            <i class="fas fa-exclamation-circle me-2"></i>
+                            Erro ao carregar alterações: ${data.error}
+                        </div>
+                    `;
+                }
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+                changesDiv.innerHTML = `
+                    <div class="alert alert-danger mb-0">
+                        <i class="fas fa-exclamation-circle me-2"></i>
+                        Erro ao carregar alterações
+                    </div>
+                `;
+            })
+            .finally(() => {
+                changesDiv.classList.remove('loading');
+            });
         }
 
+        // Função para atualizar todos os repositórios
         function refreshAllRepos() {
-            {% for repo in repos %}
-                updateChanges('{{ repo.path }}', 'changes-{{ loop.index }}');
-            {% endfor %}
-        }
-
-        function removeRepo(repoPath) {
-            if (confirm('Tem certeza que deseja remover este repositório da lista? Esta ação pode ser desfeita nas configurações.')) {
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.action = '/remove_repo';
-                
-                const input = document.createElement('input');
-                input.type = 'hidden';
-                input.name = 'repo_path';
-                input.value = repoPath;
-                
-                form.appendChild(input);
-                document.body.appendChild(form);
-                form.submit();
-            }
+            fetch('/refresh_repos', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Atualiza cada repositório individualmente
+                    {% for repo in repos %}
+                        updateChanges('{{ repo.path }}', 'changes-{{ loop.index }}');
+                    {% endfor %}
+                } else {
+                    showToast('Erro ao atualizar repositórios', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+                showToast('Erro ao atualizar repositórios', 'error');
+            });
         }
 
         // Atualiza as alterações para cada repositório quando a página carrega
-        document.addEventListener('DOMContentLoaded', refreshAllRepos);
+        document.addEventListener('DOMContentLoaded', function() {
+            {% for repo in repos %}
+                updateChanges('{{ repo.path }}', 'changes-{{ loop.index }}');
+            {% endfor %}
+        });
 
         // Atualiza as alterações a cada 30 segundos
         setInterval(refreshAllRepos, 30000);
-
-        // Adiciona animação aos alertas
-        document.addEventListener('DOMContentLoaded', function() {
-            setTimeout(function() {
-                const alerts = document.querySelectorAll('.alert');
-                alerts.forEach(alert => {
-                    alert.classList.add('fade');
-                    setTimeout(() => alert.remove(), 300);
-                });
-            }, 5000);
-        });
     </script>
 </body>
 </html>

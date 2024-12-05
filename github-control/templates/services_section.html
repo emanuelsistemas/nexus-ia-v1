@@ -13,10 +13,10 @@
                 <i class="fas fa-sync-alt me-1"></i>
                 Atualizar
             </button>
-            <button class="btn btn-sm btn-outline-danger ms-2" onclick="confirmRemoveRepo('{{ repo.path }}')">
+            <a href="{{ url_for('confirm_remove', repo_path=repo.path) }}" class="btn btn-sm btn-outline-danger ms-2">
                 <i class="fas fa-trash-alt me-1"></i>
                 Remover
-            </button>
+            </a>
         </div>
     </div>
     
@@ -26,20 +26,22 @@
                 <div class="service-item">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <span class="service-type">
-                                {% if service.type == 'Python' %}
-                                    <i class="fab fa-python text-info"></i>
-                                {% elif service.type == 'Node.js' %}
-                                    <i class="fab fa-node-js text-success"></i>
-                                {% elif service.type == 'Java' %}
-                                    <i class="fab fa-java text-danger"></i>
-                                {% elif service.type == 'Docker' %}
-                                    <i class="fab fa-docker text-primary"></i>
-                                {% else %}
-                                    <i class="fas fa-cog text-secondary"></i>
-                                {% endif %}
-                                {{ service.name }}
-                            </span>
+                            {% if service.type %}
+                                <span class="service-type">
+                                    {% if service.type == 'Python' %}
+                                        <i class="fab fa-python text-info"></i>
+                                    {% elif service.type == 'Node.js' %}
+                                        <i class="fab fa-node-js text-success"></i>
+                                    {% elif service.type == 'Java' %}
+                                        <i class="fab fa-java text-danger"></i>
+                                    {% elif service.type == 'Docker' %}
+                                        <i class="fab fa-docker text-primary"></i>
+                                    {% else %}
+                                        <i class="fas fa-cog text-secondary"></i>
+                                    {% endif %}
+                                    {{ service.name }}
+                                </span>
+                            {% endif %}
                             {% if service.pid %}
                                 <small class="text-muted ms-2">(PID: {{ service.pid }})</small>
                             {% endif %}
@@ -64,6 +66,23 @@
                                 <i class="fas {% if service.status == 'Rodando' %}fa-play{% elif service.status == 'Em uso' %}fa-lock{% else %}fa-stop{% endif %} me-1"></i>
                                 {{ service.status }}
                             </span>
+                            
+                            <!-- Botões de controle do serviço -->
+                            <div class="btn-group btn-group-sm ms-2">
+                                {% if service.status == 'Rodando' or service.status == 'Em uso' %}
+                                    <button class="btn btn-outline-warning" onclick="controlService('{{ service.path }}', 'stop')" title="Parar serviço">
+                                        <i class="fas fa-stop"></i>
+                                    </button>
+                                    <button class="btn btn-outline-info" onclick="controlService('{{ service.path }}', 'restart')" title="Reiniciar serviço">
+                                        <i class="fas fa-sync-alt"></i>
+                                    </button>
+                                {% else %}
+                                    <button class="btn btn-outline-success" onclick="controlService('{{ service.path }}', 'start')" title="Iniciar serviço">
+                                        <i class="fas fa-play"></i>
+                                    </button>
+                                {% endif %}
+                            </div>
+
                             {% if service.status == 'Rodando' %}
                                 <button class="btn btn-sm btn-outline-info ms-2" data-bs-toggle="collapse" data-bs-target="#logs-{{ service.pid }}" aria-expanded="false" aria-controls="logs-{{ service.pid }}" onclick="handleLogToggle('{{ service.pid }}')" title="Mostrar/Ocultar Logs">
                                     <i class="fas fa-terminal"></i>
@@ -116,82 +135,110 @@
 
 <!-- Modal de Confirmação de Remoção -->
 <div class="modal fade" id="removeRepoModal" tabindex="-1" aria-labelledby="removeRepoModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="removeRepoModalLabel">Remover Repositório Git</h5>
+                <h5 class="modal-title" id="removeRepoModalLabel">Remover Repositório</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <p>Tem certeza que deseja remover este repositório Git?</p>
-                <div class="alert alert-warning">
-                    <i class="fas fa-exclamation-triangle me-2"></i>
-                    <strong>Atenção:</strong> Esta ação irá excluir permanentemente o diretório .git e arquivos de configuração Git. Seus arquivos de projeto permanecerão intactos.
-                </div>
+                <p>Como você deseja remover este repositório?</p>
+                <input type="hidden" id="repoPathToRemove">
                 <div class="form-check mb-2">
-                    <input class="form-check-input" type="checkbox" id="stopServicesCheck">
-                    <label class="form-check-label" for="stopServicesCheck">
-                        Parar serviços em execução
+                    <input class="form-check-input" type="radio" name="removeOption" id="listOnly" value="list_only">
+                    <label class="form-check-label" for="listOnly">
+                        Remover apenas da lista (mantém todos os arquivos)
                     </label>
                 </div>
-                <div class="form-check mb-3">
-                    <input class="form-check-input" type="checkbox" id="deleteFilesCheck">
-                    <label class="form-check-label" for="deleteFilesCheck">
-                        Confirmo que desejo excluir permanentemente este repositório Git
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="radio" name="removeOption" id="gitOnly" value="git_only">
+                    <label class="form-check-label" for="gitOnly">
+                        Remover arquivos Git (mantém diretório visível)
+                    </label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="removeOption" id="completely" value="completely">
+                    <label class="form-check-label" for="completely">
+                        Remover completamente (exclui arquivos Git e remove da lista)
                     </label>
                 </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-danger" onclick="removeRepo()" id="removeRepoBtn" disabled>Remover</button>
+                <button type="button" class="btn btn-danger" id="removeRepoBtn" onclick="removeRepo()" disabled>Remover</button>
             </div>
         </div>
     </div>
 </div>
 
 <script>
-let repoToRemove = null;
-const removeModal = new bootstrap.Modal(document.getElementById('removeRepoModal'));
-
-function confirmRemoveRepo(repoPath) {
-    repoToRemove = repoPath;
-    // Reset checkboxes
-    document.getElementById('stopServicesCheck').checked = false;
-    document.getElementById('deleteFilesCheck').checked = false;
-    document.getElementById('removeRepoBtn').disabled = true;
-    removeModal.show();
-}
-
-// Habilita o botão de remover apenas quando o usuário confirmar a exclusão
-document.getElementById('deleteFilesCheck').addEventListener('change', function() {
-    document.getElementById('removeRepoBtn').disabled = !this.checked;
+// Habilita o botão de remover quando uma opção é selecionada
+document.querySelectorAll('input[name="removeOption"]').forEach(radio => {
+    radio.addEventListener('change', function() {
+        document.getElementById('removeRepoBtn').disabled = false;
+    });
 });
 
-function removeRepo() {
-    if (!repoToRemove || !document.getElementById('deleteFilesCheck').checked) return;
+function confirmRemoveRepo(repoPath) {
+    document.getElementById('repoPathToRemove').value = repoPath;
+    document.getElementById('removeRepoBtn').disabled = true;
     
-    const stopServices = document.getElementById('stopServicesCheck').checked;
+    const modal = new bootstrap.Modal(document.getElementById('removeRepoModal'));
+    modal.show();
+}
+
+function removeRepo() {
+    const repoPath = document.getElementById('repoPathToRemove').value;
+    const removeOption = document.querySelector('input[name="removeOption"]:checked').value;
+    
+    // Desabilita o botão para evitar duplo clique
+    document.getElementById('removeRepoBtn').disabled = true;
+    
+    fetch('/remove_repo', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            repo_path: repoPath,
+            remove_option: removeOption
+        })
+    })
+    .then(response => {
+        if (response.ok) {
+            const modal = bootstrap.Modal.getInstance(document.getElementById('removeRepoModal'));
+            modal.hide();
+            showToast('Repositório removido com sucesso', 'success');
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            throw new Error('Erro ao remover repositório');
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        showToast('Erro ao remover repositório', 'error');
+        document.getElementById('removeRepoBtn').disabled = false;
+    });
+}
+</script>
+
+<script>
+function controlService(servicePath, action) {
     const form = document.createElement('form');
     form.method = 'POST';
-    form.action = '/remove_repo';
+    form.action = '/control_service';
     
-    const repoPathInput = document.createElement('input');
-    repoPathInput.type = 'hidden';
-    repoPathInput.name = 'repo_path';
-    repoPathInput.value = repoToRemove;
-    form.appendChild(repoPathInput);
+    const servicePathInput = document.createElement('input');
+    servicePathInput.type = 'hidden';
+    servicePathInput.name = 'service_path';
+    servicePathInput.value = servicePath;
+    form.appendChild(servicePathInput);
     
-    const stopServicesInput = document.createElement('input');
-    stopServicesInput.type = 'hidden';
-    stopServicesInput.name = 'stop_services';
-    stopServicesInput.value = stopServices;
-    form.appendChild(stopServicesInput);
-    
-    const deleteFilesInput = document.createElement('input');
-    deleteFilesInput.type = 'hidden';
-    deleteFilesInput.name = 'delete_files';
-    deleteFilesInput.value = 'true';
-    form.appendChild(deleteFilesInput);
+    const actionInput = document.createElement('input');
+    actionInput.type = 'hidden';
+    actionInput.name = 'action';
+    actionInput.value = action;
+    form.appendChild(actionInput);
     
     document.body.appendChild(form);
     form.submit();
