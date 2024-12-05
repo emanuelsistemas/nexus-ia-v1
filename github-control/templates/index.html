@@ -4,18 +4,236 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Nexus Git Manager</title>
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        /* Override de algumas classes do Bootstrap para o tema dark */
+        .modal-content {
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+        .modal-header {
+            border-bottom: 1px solid var(--border-color);
+        }
+        .modal-footer {
+            border-top: 1px solid var(--border-color);
+        }
+        .close {
+            color: var(--text-primary);
+        }
+        .btn-close {
+            filter: invert(1) grayscale(100%) brightness(200%);
+        }
+    </style>
 </head>
-<body>
+<body class="bg-dark">
     <div class="container">
-        <h1>Nexus Git Manager</h1>
-        <form action="/commit" method="POST">
-            <div class="form-group">
-                <label for="message">Mensagem do Commit:</label>
-                <input type="text" class="form-control" id="message" name="message" required>
+        <div class="header">
+            <div class="d-flex justify-content-between align-items-center">
+                <h1><i class="fab fa-git-alt me-2"></i>Nexus Git Manager</h1>
+                <div class="header-actions">
+                    <button class="btn btn-outline-light" onclick="refreshAllRepos()">
+                        <i class="fas fa-sync-alt"></i> Atualizar Todos
+                    </button>
+                </div>
             </div>
-            <button type="submit" class="btn btn-primary">Commitar</button>
-        </form>
+        </div>
+        
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-messages">
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ 'success' if category == 'success' else 'danger' }} alert-dismissible fade show">
+                            <i class="fas fa-{{ 'check-circle' if category == 'success' else 'exclamation-circle' }} me-2"></i>
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        {% for repo in repos %}
+        <div class="repo-card" id="repo-{{ loop.index }}">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="mb-0">
+                            <i class="fas fa-folder me-2"></i>
+                            {{ repo.name }}
+                        </h5>
+                        <small class="text-muted">
+                            <i class="fas fa-code-branch me-1"></i>
+                            {{ repo.path }}
+                        </small>
+                    </div>
+                    <div class="repo-actions">
+                        <button class="btn btn-outline-danger btn-sm" onclick="removeRepo('{{ repo.path }}')" title="Remover Repositório">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                        <button class="btn btn-outline-primary btn-sm" onclick="updateChanges('{{ repo.path }}', 'changes-{{ loop.index }}')" title="Atualizar">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                {% include 'services_section.html' %}
+                <!-- Configuração do Repositório -->
+                <form action="{{ url_for('configure_repo') }}" method="POST" class="mb-4">
+                    <input type="hidden" name="repo_path" value="{{ repo.path }}">
+                    <div class="input-group">
+                        <span class="input-group-text">
+                            <i class="fas fa-link"></i>
+                        </span>
+                        <input type="text" class="form-control" name="remote_url" 
+                               placeholder="URL do repositório remoto (ex: https://github.com/usuario/repo.git)"
+                               value="{{ repo.remote_url }}">
+                        <button class="btn btn-outline-primary" type="submit">
+                            <i class="fas fa-save me-1"></i>
+                            Configurar Remote
+                        </button>
+                    </div>
+                </form>
+
+                <!-- Lista de Alterações -->
+                <div class="changes-section">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h6>
+                            <i class="fas fa-exchange-alt me-2"></i>
+                            Alterações Pendentes
+                        </h6>
+                        <button class="btn btn-sm btn-outline-secondary" 
+                                onclick="updateChanges('{{ repo.path }}', 'changes-{{ loop.index }}')">
+                            <i class="fas fa-sync-alt me-1"></i>
+                            Atualizar
+                        </button>
+                    </div>
+                    <div class="changes-list" id="changes-{{ loop.index }}">
+                        <div class="loading text-center">
+                            <i class="fas fa-spinner fa-spin"></i> Carregando alterações...
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Formulário de Commit -->
+                <form class="commit-form" action="{{ url_for('commit') }}" method="post">
+                    <input type="hidden" name="repo_path" value="{{ repo.path }}">
+                    <div class="form-group">
+                        <label for="commit_message">Mensagem do Commit:</label>
+                        <textarea class="form-control" id="commit_message" name="commit_message" rows="2" required></textarea>
+                    </div>
+                    <div class="mt-3">
+                        <button type="submit" class="btn btn-outline-primary">
+                            <i class="fas fa-code-commit me-2"></i>Commit e Push
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        {% endfor %}
     </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/services.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/service-logs.js') }}"></script>
+    <script>
+        // Função para atualizar a lista de alterações
+        function updateChanges(repoPath, elementId) {
+            const changesDiv = document.getElementById(elementId);
+            changesDiv.innerHTML = '<div class="loading text-center"><i class="fas fa-spinner fa-spin"></i> Carregando alterações...</div>';
+            
+            fetch('/get_changes?repo_path=' + encodeURIComponent(repoPath))
+                .then(response => response.json())
+                .then(data => {
+                    if (data.changes.length === 0) {
+                        changesDiv.innerHTML = '<div class="text-muted text-center">Nenhuma alteração pendente</div>';
+                        return;
+                    }
+                    
+                    let html = '';
+                    data.changes.forEach(change => {
+                        const status = change.split(' ')[0];
+                        const file = change.split(' ').slice(1).join(' ');
+                        
+                        let statusClass = '';
+                        let statusIcon = '';
+                        
+                        switch(status) {
+                            case 'M':
+                                statusClass = 'modified';
+                                statusIcon = 'pen-to-square';
+                                break;
+                            case 'A':
+                                statusClass = 'new';
+                                statusIcon = 'plus';
+                                break;
+                            case 'D':
+                                statusClass = 'deleted';
+                                statusIcon = 'trash';
+                                break;
+                            default:
+                                statusClass = 'untracked';
+                                statusIcon = 'question';
+                        }
+                        
+                        html += `
+                            <div class="file-status ${statusClass}">
+                                <i class="fas fa-${statusIcon} status-icon ${statusClass}"></i>
+                                ${file}
+                            </div>
+                        `;
+                    });
+                    
+                    changesDiv.innerHTML = html;
+                })
+                .catch(error => {
+                    changesDiv.innerHTML = '<div class="text-danger">Erro ao carregar alterações</div>';
+                    console.error('Error:', error);
+                });
+        }
+
+        function refreshAllRepos() {
+            {% for repo in repos %}
+                updateChanges('{{ repo.path }}', 'changes-{{ loop.index }}');
+            {% endfor %}
+        }
+
+        function removeRepo(repoPath) {
+            if (confirm('Tem certeza que deseja remover este repositório da lista? Esta ação pode ser desfeita nas configurações.')) {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '/remove_repo';
+                
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'repo_path';
+                input.value = repoPath;
+                
+                form.appendChild(input);
+                document.body.appendChild(form);
+                form.submit();
+            }
+        }
+
+        // Atualiza as alterações para cada repositório quando a página carrega
+        document.addEventListener('DOMContentLoaded', refreshAllRepos);
+
+        // Atualiza as alterações a cada 30 segundos
+        setInterval(refreshAllRepos, 30000);
+
+        // Adiciona animação aos alertas
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(function() {
+                const alerts = document.querySelectorAll('.alert');
+                alerts.forEach(alert => {
+                    alert.classList.add('fade');
+                    setTimeout(() => alert.remove(), 300);
+                });
+            }, 5000);
+        });
+    </script>
 </body>
 </html>

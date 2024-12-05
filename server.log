@@ -1,11 +1,7 @@
-Traceback (most recent call last):
-  File "main.py", line 3, in <module>
-    from api.v1 import backup
-  File "/root/project/nexus/nexus-ia/v1/api/v1/backup.py", line 5, in <module>
-    from core.backup.manager import BackupManager
-  File "/root/project/nexus/nexus-ia/v1/core/backup/manager.py", line 7, in <module>
-    from .validator import BackupValidator
-  File "/root/project/nexus/nexus-ia/v1/core/backup/validator.py", line 100
-    return False, f"Arquivo ausente: {file_info["path"]}"
-                                                 ^
-SyntaxError: invalid syntax
+INFO:     Will watch for changes in these directories: ['/root/project/nexus/nexus-ia/v1']
+INFO:     Uvicorn running on http://0.0.0.0:8001 (Press CTRL+C to quit)
+INFO:     Started reloader process [97365] using statreload
+INFO:     Started server process [97372]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     127.0.0.1:55758 - "GET /health HTTP/1.1" 200 OK

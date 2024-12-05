@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from typing import List, Optional, Dict, Any
 from pydantic import BaseModel
-from core.backup.models import BackupMetadata, BackupType
+from core.backup.models import BackupMetadata, BackupType, CompressionType
 from core.backup.manager import BackupManager
 import os
 
@@ -12,6 +12,8 @@ class CreateBackupRequest(BaseModel):
     project_id: str
     backup_type: BackupType
     data_dir: str
+    compression_type: CompressionType = CompressionType.ZLIB
+    compression_level: int = 6
     tags: Optional[Dict[str, str]] = None
     extra: Optional[Dict[str, Any]] = None
 
@@ -28,6 +30,8 @@ def create_backup(body: CreateBackupRequest) -> BackupMetadata:
             project_id=body.project_id,
             backup_type=body.backup_type,
             data_dir=body.data_dir,
+            compression_type=body.compression_type,
+            compression_level=body.compression_level,
             tags=body.tags,
             extra=body.extra
         )

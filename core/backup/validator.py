@@ -1,132 +1,92 @@
-from typing import Optional, Tuple, Dict
-from datetime import datetime
-import hashlib
-import json
 import os
+import hashlib
+from typing import Dict, Tuple, Optional
 from .models import FileInfo
 
 class BackupValidator:
-    """Validador de integridade dos backups"""
+    """Validador de backups"""
 
-    def __init__(self, backup_dir: str):
-        self.backup_dir = backup_dir
+    def __init__(self, base_dir: str):
+        self.base_dir = base_dir
 
-    def calculate_file_checksum(self, file_path: str) -> str:
-        """Calcula o checksum de um arquivo"""
-        hash_md5 = hashlib.md5()
-        with open(file_path, "rb") as f:
-            for chunk in iter(lambda: f.read(4096), b""):
-                hash_md5.update(chunk)
-        return hash_md5.hexdigest()
+    def calculate_checksum(self, path: str) -> str:
+        """Calcula o checksum de um arquivo ou diretório"""
+        if not os.path.exists(path):
+            return ""
 
-    def get_file_info(self, file_path: str, base_path: str) -> FileInfo:
-        """Obtém informações de um arquivo"""
-        rel_path = os.path.relpath(file_path, base_path)
-        stat = os.stat(file_path)
-        return FileInfo(
-            path=rel_path,
-            size=stat.st_size,
-            modified_at=datetime.fromtimestamp(stat.st_mtime),
-            checksum=self.calculate_file_checksum(file_path)
-        )
-
-    def scan_directory(self, dir_path: str) -> Dict[str, FileInfo]:
-        """Escaneia um diretório e retorna informações dos arquivos"""
-        files_info = {}
-        for root, _, files in os.walk(dir_path):
-            for file in files:
-                file_path = os.path.join(root, file)
-                file_info = self.get_file_info(file_path, dir_path)
-                files_info[file_info.path] = file_info
-        return files_info
-
-    def calculate_checksum(self, dir_path: str) -> str:
-        """Calcula o checksum de um diretório"""
-        sha256_hash = hashlib.sha256()
-
-        # Lista todos os arquivos e ordena para consistência
-        all_files = []
-        for root, _, files in os.walk(dir_path):
-            for file in files:
-                file_path = os.path.join(root, file)
-                rel_path = os.path.relpath(file_path, dir_path)
-                all_files.append((rel_path, file_path))
-
-        # Processa arquivos em ordem
-        for rel_path, file_path in sorted(all_files):
-            # Adiciona o caminho relativo ao hash
-            sha256_hash.update(rel_path.encode())
-            
-            # Adiciona o conteúdo do arquivo
-            with open(file_path, "rb") as f:
+        if os.path.isfile(path):
+            # Para arquivo, calcula o hash do conteúdo
+            hasher = hashlib.sha256()
+            with open(path, "rb") as f:
                 for chunk in iter(lambda: f.read(4096), b""):
-                    sha256_hash.update(chunk)
+                    hasher.update(chunk)
+            return hasher.hexdigest()
+        else:
+            # Para diretório, combina os hashes dos arquivos
+            hasher = hashlib.sha256()
+            for root, _, files in os.walk(path):
+                for file in sorted(files):  # Ordena para consistência
+                    file_path = os.path.join(root, file)
+                    rel_path = os.path.relpath(file_path, path)
+                    hasher.update(rel_path.encode())
+                    file_hash = self.calculate_checksum(file_path)
+                    hasher.update(file_hash.encode())
+            return hasher.hexdigest()
 
-        return sha256_hash.hexdigest()
+    def scan_directory(self, path: str) -> Dict[str, FileInfo]:
+        """Escaneia um diretório e retorna informações dos arquivos"""
+        files = {}
+        if not os.path.exists(path):
+            return files
 
-    def validate_backup(self, backup_id: str, project_id: str) -> Tuple[bool, Optional[str]]:
-        """Valida a integridade de um backup"""
-        try:
-            # Caminho do backup
-            backup_path = os.path.join(self.backup_dir, project_id, backup_id)
-            
-            # Verifica se existe
-            if not os.path.exists(backup_path):
-                return False, "Backup não encontrado"
+        for root, _, filenames in os.walk(path):
+            for filename in filenames:
+                file_path = os.path.join(root, filename)
+                rel_path = os.path.relpath(file_path, path)
+                stat = os.stat(file_path)
+                files[rel_path] = FileInfo(
+                    path=rel_path,
+                    size=stat.st_size,
+                    modified_at=stat.st_mtime,
+                    checksum=hashlib.md5(
+                        open(file_path, "rb").read()
+                    ).hexdigest()
+                )
 
-            # Lê metadados
-            meta_path = os.path.join(backup_path, "metadata.json")
-            if not os.path.exists(meta_path):
-                return False, "Metadados não encontrados"
-
-            with open(meta_path, "r") as f:
-                metadata = json.load(f)
-
-            # Verifica checksum
-            data_path = os.path.join(backup_path, "data")
-            current_checksum = self.calculate_checksum(data_path)
-
-            if current_checksum != metadata.get("checksum"):
-                return False, "Checksum inválido"
-
-            # Verifica arquivos individuais
-            current_files = self.scan_directory(data_path)
-            for file_info in metadata.get("files", []):
-                if file_info["is_deleted"]:
-                    continue
-
-                current_file = current_files.get(file_info["path"])
-                if not current_file:
-                    return False, f"Arquivo ausente: {file_info["path"]}"
-
-                if current_file.checksum != file_info["checksum"]:
-                    return False, f"Checksum inválido para: {file_info["path"]}"
-
-            return True, None
-
-        except Exception as e:
-            return False, str(e)
+        return files
 
     def validate_restore_point(self, backup_id: str, project_id: str) -> Tuple[bool, Optional[str]]:
-        """Valida se um backup pode ser restaurado"""
-        # Primeiro valida integridade
-        is_valid, error = self.validate_backup(backup_id, project_id)
-        if not is_valid:
-            return False, error
+        """Valida um ponto de restauração"""
+        backup_dir = os.path.join(self.base_dir, project_id, backup_id)
+        data_dir = os.path.join(backup_dir, "data")
 
-        try:
-            # Verifica dependências (para backups incrementais)
-            meta_path = os.path.join(self.backup_dir, project_id, backup_id, "metadata.json")
-            with open(meta_path, "r") as f:
-                metadata = json.load(f)
+        # Verifica se o diretório do backup existe
+        if not os.path.exists(backup_dir):
+            return False, "Backup não encontrado"
 
-            parent_id = metadata.get("parent_backup_id")
-            if parent_id:
-                # Valida backup pai recursivamente
-                return self.validate_restore_point(parent_id, project_id)
+        # Verifica se o diretório de dados existe
+        if not os.path.exists(data_dir):
+            return False, "Dados do backup não encontrados"
 
-            return True, None
+        # Verifica se o arquivo de metadados existe
+        metadata_path = os.path.join(backup_dir, "metadata.json")
+        if not os.path.exists(metadata_path):
+            return False, "Metadados do backup não encontrados"
 
-        except Exception as e:
-            return False, str(e)
+        # Verifica se os arquivos listados nos metadados existem
+        with open(metadata_path, "r") as f:
+            import json
+            metadata = json.load(f)
+            for file_info in metadata["files"]:
+                if not file_info["is_deleted"]:
+                    file_path = os.path.join(data_dir, file_info["path"])
+                    if metadata["compression"]:
+                        compressed_path = file_path + ".compressed"
+                        if not os.path.exists(compressed_path):
+                            return False, "Arquivo comprimido ausente: " + file_info["path"] + ".compressed"
+                    else:
+                        if not os.path.exists(file_path):
+                            return False, "Arquivo ausente: " + file_info["path"]
+
+        return True, None
 

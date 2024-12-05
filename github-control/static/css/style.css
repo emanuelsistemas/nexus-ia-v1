@@ -1,0 +1,591 @@
+/* Variáveis de Cores */
+:root {
+    --bg-primary: #1a1a1a;
+    --bg-secondary: #2d2d2d;
+    --bg-tertiary: #363636;
+    --text-primary: #e0e0e0;
+    --text-secondary: #b0b0b0;
+    --border-color: #404040;
+    --accent-color: #4a9eff;
+    --danger-color: #ff4d4d;
+    --success-color: #4caf50;
+    --warning-color: #ffc107;
+}
+
+/* Estilos Gerais */
+body {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+/* Cabeçalho */
+.header {
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+    padding: 1rem;
+    margin-bottom: 2rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+/* Cards de Repositório */
+.repo-card {
+    background-color: var(--bg-secondary);
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    margin-bottom: 1.5rem;
+    transition: transform 0.2s;
+    border: 1px solid var(--border-color);
+}
+
+.repo-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+}
+
+.repo-card .card-header {
+    background-color: var(--bg-tertiary);
+    border-bottom: 1px solid var(--border-color);
+    padding: 1rem;
+    color: var(--text-primary);
+}
+
+.repo-card .card-body {
+    padding: 1.5rem;
+    background-color: var(--bg-secondary);
+}
+
+/* Lista de Alterações */
+.changes-list {
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 10px;
+    margin: 1rem 0;
+    background-color: var(--bg-tertiary);
+    color: var(--text-primary);
+}
+
+.changes-list .file-status {
+    padding: 4px 8px;
+    margin: 2px 0;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+}
+
+.changes-list .file-status:hover {
+    background-color: var(--bg-secondary);
+}
+
+.changes-list .file-status.modified {
+    border-left: 3px solid var(--warning-color);
+}
+
+.changes-list .file-status.new {
+    border-left: 3px solid var(--success-color);
+}
+
+.changes-list .file-status.deleted {
+    border-left: 3px solid var(--danger-color);
+}
+
+.changes-list .file-status.untracked {
+    border-left: 3px solid var(--text-secondary);
+}
+
+/* Badges de Status */
+.badge {
+    padding: 5px 10px;
+    margin-right: 8px;
+    border-radius: 12px;
+    font-weight: 500;
+}
+
+.badge-modified {
+    background-color: var(--warning-color);
+    color: #000;
+}
+
+.badge-new {
+    background-color: var(--success-color);
+    color: var(--text-primary);
+}
+
+.badge-deleted {
+    background-color: var(--danger-color);
+    color: var(--text-primary);
+}
+
+.badge-untracked {
+    background-color: var(--text-secondary);
+    color: var(--text-primary);
+}
+
+/* Formulários */
+.input-group {
+    margin-bottom: 1rem;
+}
+
+.form-control {
+    background-color: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+}
+
+.form-control:focus {
+    background-color: var(--bg-tertiary);
+    border-color: var(--accent-color);
+    color: var(--text-primary);
+    box-shadow: 0 0 0 0.2rem rgba(74, 158, 255, 0.25);
+}
+
+/* Commit Form */
+.commit-form {
+    background-color: var(--bg-tertiary);
+    padding: 15px;
+    border-radius: 8px;
+    margin-top: 15px;
+    border: 1px solid var(--border-color);
+}
+
+.commit-form label {
+    color: var(--text-primary);
+    margin-bottom: 8px;
+}
+
+.commit-form textarea {
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+}
+
+.commit-form textarea:focus {
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 0.2rem rgba(74, 158, 255, 0.25);
+}
+
+/* Botões */
+.btn-outline-primary {
+    color: var(--accent-color);
+    border-color: var(--accent-color);
+}
+
+.btn-outline-primary:hover {
+    background-color: var(--accent-color);
+    color: white;
+}
+
+.btn-outline-danger {
+    color: var(--danger-color);
+    border-color: var(--danger-color);
+}
+
+.btn-outline-danger:hover {
+    background-color: var(--danger-color);
+    color: white;
+}
+
+/* Flash Messages */
+.alert {
+    background-color: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+}
+
+.alert-success {
+    border-left: 4px solid var(--success-color);
+}
+
+.alert-danger {
+    border-left: 4px solid var(--danger-color);
+}
+
+/* Links */
+a {
+    color: var(--accent-color);
+}
+
+a:hover {
+    color: #66b1ff;
+}
+
+/* Texto */
+.text-muted {
+    color: var(--text-secondary) !important;
+}
+
+/* Commit Message */
+textarea.form-control {
+    background-color: var(--bg-tertiary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+}
+
+textarea.form-control:focus {
+    background-color: var(--bg-tertiary);
+    color: var(--text-primary);
+    border-color: var(--accent-color);
+}
+
+/* Mensagens Flash */
+.flash-messages {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+    min-width: 300px;
+}
+
+.alert {
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* Status Icons */
+.status-icon {
+    margin-right: 8px;
+    font-size: 14px;
+}
+
+.status-icon.modified {
+    color: var(--warning-color);
+}
+
+.status-icon.new {
+    color: var(--success-color);
+}
+
+.status-icon.deleted {
+    color: var(--danger-color);
+}
+
+.status-icon.untracked {
+    color: var(--text-secondary);
+}
+
+/* Loading Spinner */
+.loading {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 3px solid #f3f3f3;
+    border-radius: 50%;
+    border-top: 3px solid #3498db;
+    animation: spin 1s linear infinite;
+    margin-right: 8px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Serviços */
+.services-section {
+    background-color: rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    padding: 1rem;
+}
+
+.services-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.service-item {
+    background-color: rgba(255, 255, 255, 0.05);
+    border-radius: 6px;
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
+    transition: all 0.2s ease;
+}
+
+.service-item:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.service-type {
+    display: inline-flex;
+    align-items: center;
+    font-weight: 500;
+}
+
+.service-type i {
+    margin-right: 0.5rem;
+}
+
+.path-text {
+    font-family: 'Consolas', 'Monaco', monospace;
+    max-width: 300px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: inline-block;
+    vertical-align: bottom;
+}
+
+.copy-path {
+    color: var(--bs-secondary);
+    opacity: 0.5;
+    transition: opacity 0.2s ease;
+    padding: 0 !important;
+    margin-left: 0.25rem !important;
+    vertical-align: baseline;
+}
+
+.copy-path:hover {
+    opacity: 1;
+    color: var(--bs-primary);
+}
+
+.copy-path.copied {
+    color: var(--bs-success);
+}
+
+.service-status {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* Ícones de Status */
+.status-icon {
+    margin-right: 0.5rem;
+}
+
+.status-icon.running {
+    color: var(--success-color);
+}
+
+.status-icon.stopped {
+    color: var(--text-secondary);
+}
+
+.status-icon.error {
+    color: var(--danger-color);
+}
+
+/* Badges de Tipo de Serviço */
+.badge.bg-info {
+    background-color: #0dcaf0 !important;
+    color: #000;
+}
+
+.badge.bg-success {
+    background-color: var(--success-color) !important;
+}
+
+.badge.bg-warning {
+    background-color: var(--warning-color) !important;
+    color: #000;
+}
+
+.badge.bg-danger {
+    background-color: var(--danger-color) !important;
+}
+
+.badge.bg-primary {
+    background-color: var(--accent-color) !important;
+}
+
+/* Campo de Caminho do Serviço */
+.service-path {
+    display: flex;
+    align-items: center;
+    font-family: 'Consolas', 'Monaco', monospace;
+    word-break: break-all;
+}
+
+/* Animação para o botão de atualizar */
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.fa-sync-alt.spinning {
+    animation: spin 1s linear infinite;
+}
+
+.services-section {
+    margin-bottom: 1.5rem;
+}
+
+.services-list {
+    background-color: var(--bg-tertiary);
+    border-radius: 8px;
+    padding: 0.5rem;
+    border: 1px solid var(--border-color);
+}
+
+.service-item {
+    padding: 0.75rem;
+    border-radius: 6px;
+    margin-bottom: 0.5rem;
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    transition: transform 0.2s;
+}
+
+.service-item:last-child {
+    margin-bottom: 0;
+}
+
+.service-item:hover {
+    transform: translateX(4px);
+}
+
+.service-type {
+    font-weight: 500;
+}
+
+.service-type i {
+    margin-right: 0.5rem;
+    font-size: 1.1em;
+}
+
+.service-status {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.service-status .badge {
+    display: flex;
+    align-items: center;
+    padding: 0.4rem 0.8rem;
+}
+
+/* Estilos para a área de logs */
+.service-logs {
+    background-color: #1e1e1e;
+    border-radius: 4px;
+    margin-top: 10px;
+}
+
+.logs-header {
+    padding: 8px;
+    border-bottom: 1px solid #333;
+}
+
+.logs-actions .btn-link {
+    color: #6c757d;
+    padding: 2px 6px;
+}
+
+.logs-actions .btn-link:hover {
+    color: #fff;
+}
+
+.logs-actions .btn-link.active {
+    color: #0dcaf0;
+}
+
+.logs-container {
+    height: 300px;
+    overflow-y: auto;
+    padding: 10px;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 0.9em;
+}
+
+.logs-content {
+    color: #d4d4d4;
+}
+
+.log-line {
+    padding: 2px 0;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+/* Cores para diferentes níveis de log */
+.log-error {
+    color: #ff6b6b;
+}
+
+.log-warning {
+    color: #ffd93d;
+}
+
+.log-info {
+    color: #4dabf7;
+}
+
+.log-debug {
+    color: #69db7c;
+}
+
+.log-default {
+    color: #d4d4d4;
+}
+
+/* Estilização da barra de rolagem */
+.logs-container::-webkit-scrollbar {
+    width: 8px;
+}
+
+.logs-container::-webkit-scrollbar-track {
+    background: #2d2d2d;
+    border-radius: 4px;
+}
+
+.logs-container::-webkit-scrollbar-thumb {
+    background: #666;
+    border-radius: 4px;
+}
+
+.logs-container::-webkit-scrollbar-thumb:hover {
+    background: #888;
+}
+
+/* Animação de fade para novas linhas de log */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.log-line {
+    animation: fadeIn 0.2s ease;
+    padding: 1px 0;
+}
+
+.log-line:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.log-line.error {
+    color: var(--bs-danger);
+}
+
+.log-line.warning {
+    color: var(--bs-warning);
+}
+
+.log-line.info {
+    color: var(--bs-info);
+}

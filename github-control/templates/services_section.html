@@ -1,0 +1,199 @@
+<!-- Seção de Serviços -->
+<div class="services-section mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <h6>
+            <i class="fas fa-server me-2"></i>
+            Serviços Detectados
+            {% if repo.detected_types %}
+                <span class="badge bg-info ms-2">{{ repo.detected_types|join(', ') }}</span>
+            {% endif %}
+        </h6>
+        <div>
+            <button class="btn btn-sm btn-outline-secondary" onclick="refreshAllRepos()">
+                <i class="fas fa-sync-alt me-1"></i>
+                Atualizar
+            </button>
+            <button class="btn btn-sm btn-outline-danger ms-2" onclick="confirmRemoveRepo('{{ repo.path }}')">
+                <i class="fas fa-trash-alt me-1"></i>
+                Remover
+            </button>
+        </div>
+    </div>
+    
+    {% if repo.services %}
+        <div class="services-list">
+            {% for service in repo.services %}
+                <div class="service-item">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="service-type">
+                                {% if service.type == 'Python' %}
+                                    <i class="fab fa-python text-info"></i>
+                                {% elif service.type == 'Node.js' %}
+                                    <i class="fab fa-node-js text-success"></i>
+                                {% elif service.type == 'Java' %}
+                                    <i class="fab fa-java text-danger"></i>
+                                {% elif service.type == 'Docker' %}
+                                    <i class="fab fa-docker text-primary"></i>
+                                {% else %}
+                                    <i class="fas fa-cog text-secondary"></i>
+                                {% endif %}
+                                {{ service.name }}
+                            </span>
+                            {% if service.pid %}
+                                <small class="text-muted ms-2">(PID: {{ service.pid }})</small>
+                            {% endif %}
+                            {% if service.path %}
+                                <small class="text-muted ms-2">
+                                    <i class="fas fa-folder me-1"></i>
+                                    <span class="path-text" title="{{ service.path }}">{{ service.path }}</span>
+                                    <button class="btn btn-link btn-sm p-0 ms-1 copy-path" onclick="copyPath('{{ service.path }}')" title="Copiar caminho">
+                                        <i class="fas fa-copy"></i>
+                                    </button>
+                                </small>
+                            {% endif %}
+                            {% if service.ports %}
+                                {% for port in service.ports %}
+                                    <span class="badge bg-primary me-1">
+                                        <i class="fas fa-network-wired me-1"></i>
+                                        {{ port }}
+                                    </span>
+                                {% endfor %}
+                            {% endif %}
+                            <span class="badge {% if service.status == 'Rodando' %}bg-success{% elif service.status == 'Em uso' %}bg-warning{% else %}bg-secondary{% endif %}">
+                                <i class="fas {% if service.status == 'Rodando' %}fa-play{% elif service.status == 'Em uso' %}fa-lock{% else %}fa-stop{% endif %} me-1"></i>
+                                {{ service.status }}
+                            </span>
+                            {% if service.status == 'Rodando' %}
+                                <button class="btn btn-sm btn-outline-info ms-2" data-bs-toggle="collapse" data-bs-target="#logs-{{ service.pid }}" aria-expanded="false" aria-controls="logs-{{ service.pid }}" onclick="handleLogToggle('{{ service.pid }}')" title="Mostrar/Ocultar Logs">
+                                    <i class="fas fa-terminal"></i>
+                                </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% if service.uptime %}
+                        <small class="text-muted d-block mt-1">
+                            <i class="fas fa-clock me-1"></i>
+                            Online há {{ service.uptime.days }} dias
+                            {% if service.uptime.seconds // 3600 > 0 %}
+                                {{ service.uptime.seconds // 3600 }} horas
+                            {% endif %}
+                        </small>
+                    {% endif %}
+                    {% if service.status == 'Rodando' %}
+                        <div class="collapse service-logs mt-2" id="logs-{{ service.pid }}">
+                            <div class="logs-header d-flex justify-content-between align-items-center mb-1">
+                                <span class="text-muted"><i class="fas fa-stream me-1"></i>Logs do Serviço</span>
+                                <div class="logs-actions">
+                                    <button class="btn btn-sm btn-link" onclick="clearLogs('{{ service.pid }}')" title="Limpar Logs">
+                                        <i class="fas fa-eraser"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-link" onclick="copyLogs('{{ service.pid }}')" title="Copiar Logs">
+                                        <i class="fas fa-copy"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-link" id="autoscroll-{{ service.pid }}" onclick="toggleAutoScroll('{{ service.pid }}')" title="Auto-scroll">
+                                        <i class="fas fa-arrow-down"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="logs-container" id="logs-container-{{ service.pid }}">
+                                <div class="logs-content" id="logs-content-{{ service.pid }}">
+                                    <!-- Logs serão inseridos aqui via JavaScript -->
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="text-muted text-center p-3 bg-dark rounded">
+            <i class="fas fa-info-circle me-2"></i>
+            Nenhum serviço detectado
+        </div>
+    {% endif %}
+</div>
+
+<!-- Modal de Confirmação de Remoção -->
+<div class="modal fade" id="removeRepoModal" tabindex="-1" aria-labelledby="removeRepoModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="removeRepoModalLabel">Remover Repositório Git</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Tem certeza que deseja remover este repositório Git?</p>
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Atenção:</strong> Esta ação irá excluir permanentemente o diretório .git e arquivos de configuração Git. Seus arquivos de projeto permanecerão intactos.
+                </div>
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" id="stopServicesCheck">
+                    <label class="form-check-label" for="stopServicesCheck">
+                        Parar serviços em execução
+                    </label>
+                </div>
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" id="deleteFilesCheck">
+                    <label class="form-check-label" for="deleteFilesCheck">
+                        Confirmo que desejo excluir permanentemente este repositório Git
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" onclick="removeRepo()" id="removeRepoBtn" disabled>Remover</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let repoToRemove = null;
+const removeModal = new bootstrap.Modal(document.getElementById('removeRepoModal'));
+
+function confirmRemoveRepo(repoPath) {
+    repoToRemove = repoPath;
+    // Reset checkboxes
+    document.getElementById('stopServicesCheck').checked = false;
+    document.getElementById('deleteFilesCheck').checked = false;
+    document.getElementById('removeRepoBtn').disabled = true;
+    removeModal.show();
+}
+
+// Habilita o botão de remover apenas quando o usuário confirmar a exclusão
+document.getElementById('deleteFilesCheck').addEventListener('change', function() {
+    document.getElementById('removeRepoBtn').disabled = !this.checked;
+});
+
+function removeRepo() {
+    if (!repoToRemove || !document.getElementById('deleteFilesCheck').checked) return;
+    
+    const stopServices = document.getElementById('stopServicesCheck').checked;
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '/remove_repo';
+    
+    const repoPathInput = document.createElement('input');
+    repoPathInput.type = 'hidden';
+    repoPathInput.name = 'repo_path';
+    repoPathInput.value = repoToRemove;
+    form.appendChild(repoPathInput);
+    
+    const stopServicesInput = document.createElement('input');
+    stopServicesInput.type = 'hidden';
+    stopServicesInput.name = 'stop_services';
+    stopServicesInput.value = stopServices;
+    form.appendChild(stopServicesInput);
+    
+    const deleteFilesInput = document.createElement('input');
+    deleteFilesInput.type = 'hidden';
+    deleteFilesInput.name = 'delete_files';
+    deleteFilesInput.value = 'true';
+    form.appendChild(deleteFilesInput);
+    
+    document.body.appendChild(form);
+    form.submit();
+}
+</script>
