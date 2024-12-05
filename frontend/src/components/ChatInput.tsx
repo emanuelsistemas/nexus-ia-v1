@@ -30,18 +30,20 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
   return (
     <div
-      className="p-4 fixed bottom-0 left-0 right-0"
-      style={{ background: theme.colors.background }}
+      className="fixed bottom-0 left-0 right-0 p-4 md:p-6 border-t transition-all duration-200"
+      style={{
+        background: theme.colors.background,
+        borderColor: theme.colors.border,
+      }}
     >
-      <div className="max-w-4xl mx-auto flex gap-2">
+      <div className="max-w-5xl mx-auto flex gap-4">
         <textarea
-          className="flex-1 resize-none rounded-lg p-3"
+          className="flex-1 resize-none rounded-xl p-4 min-h-[60px] transition-all duration-200 focus:ring-2 focus:ring-primary focus:outline-none"
           style={{
             background: theme.chat.input.background,
             border: theme.chat.input.border,
             color: theme.colors.text.primary,
           }}
-          rows={1}
           placeholder={placeholder}
           value={message}
           onChange={(e) => setMessage(e.target.value)}
@@ -49,11 +51,10 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           disabled={disabled}
         />
         <button
-          className="px-4 py-2 rounded-lg font-medium transition-colors"
+          className="px-6 py-3 rounded-xl font-semibold transition-all duration-200 hover:opacity-90 hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
           style={{
             background: theme.colors.primary,
             color: theme.colors.text.primary,
-            opacity: disabled || !message.trim() ? 0.5 : 1,
           }}
           onClick={handleSend}
           disabled={disabled || !message.trim()}

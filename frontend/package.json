@@ -36,6 +36,7 @@
     ]
   },
   "devDependencies": {
+    "@tailwindcss/typography": "^0.5.15",
     "@vitejs/plugin-react": "^4.0.0",
     "autoprefixer": "^10.4.14",
     "postcss": "^8.4.23",
@@ -43,4 +44,3 @@
     "vite": "^4.3.9"
   }
 }
-

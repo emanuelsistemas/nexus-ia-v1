@@ -291,32 +291,67 @@ def commit():
         flash(f'Erro ao realizar commit/push: {error_message}', 'error')
         return redirect(url_for('index'))
 
-@app.route('/get_changes')
+@app.route('/get_changes', methods=['GET', 'POST'])
 def get_changes():
     repo_path = request.args.get('repo_path')
+    if not repo_path and request.is_json:
+        repo_path = request.json.get('repo_path')
+    
     if not repo_path:
-        return jsonify({'error': 'Caminho do repositório não fornecido'}), 400
+        return jsonify({'success': False, 'error': 'Caminho do repositório não fornecido'}), 400
         
     try:
         repo = git.Repo(repo_path)
         changes = []
         
-        # Arquivos modificados
-        for item in repo.index.diff(None):
-            if item.new_file:
-                changes.append(f"A {item.a_path}")
-            elif item.deleted_file:
-                changes.append(f"D {item.a_path}")
-            else:
-                changes.append(f"M {item.a_path}")
-        
-        # Arquivos não rastreados
-        for item in repo.untracked_files:
-            changes.append(f"? {item}")
+        try:
+            # Verifica arquivos modificados (incluindo staged)
+            for item in repo.index.diff(None):
+                if item.new_file:
+                    changes.append(f"A {item.a_path}")
+                elif item.deleted_file:
+                    changes.append(f"D {item.a_path}")
+                else:
+                    changes.append(f"M {item.a_path}")
             
-        return jsonify({'changes': changes})
+            # Verifica arquivos staged
+            for item in repo.index.diff('HEAD'):
+                status = "S"  # S para staged
+                path = item.a_path
+                if not any(c.endswith(path) for c in changes):  # Evita duplicatas
+                    changes.append(f"{status} {path}")
+            
+            # Verifica arquivos não rastreados
+            for item in repo.untracked_files:
+                changes.append(f"? {item}")
+                
+            return jsonify({
+                'success': True,
+                'changes': changes,
+                'branch': repo.active_branch.name
+            })
+        except git.exc.GitCommandError as e:
+            # Se houver erro no git, tenta recuperar manualmente
+            result = subprocess.run(['git', 'status', '--porcelain'], 
+                                 cwd=repo_path, 
+                                 capture_output=True, 
+                                 text=True)
+            if result.returncode == 0:
+                changes = [line.strip() for line in result.stdout.splitlines()]
+                return jsonify({
+                    'success': True,
+                    'changes': changes,
+                    'branch': 'unknown'  # Não podemos determinar o branch neste caso
+                })
+            else:
+                raise Exception(f"Erro ao executar git status: {result.stderr}")
+                
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        app.logger.error(f"Erro ao obter alterações: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
 
 @app.route('/refresh_repos', methods=['POST'])
 def refresh_repos():

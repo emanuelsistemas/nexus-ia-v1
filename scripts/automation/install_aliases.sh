@@ -11,6 +11,7 @@ touch "$ALIAS_FILE"
 echo "# Nexus IA V1 Aliases - Adicionado em $(date '+%d/%m/%Y %H:%M:%S')" >> "$ALIAS_FILE"
 echo "alias ac='$PROJECT_DIR/scripts/automation/auto_commit.sh'" >> "$ALIAS_FILE"
 echo "alias rolllist='$PROJECT_DIR/scripts/automation/roll_list.sh'" >> "$ALIAS_FILE"
+echo "alias monitor='$PROJECT_DIR/scripts/automation/monitor.sh'" >> "$ALIAS_FILE"
 
 # Função para adicionar o alias de rollback
 function add_rollback_alias() {
@@ -31,3 +32,4 @@ echo "ac          - Commit e push automático com data/hora"
 echo "rolllist    - Lista commits disponíveis para rollback"
 echo "rollback-0  - Volta para o último commit"
 echo "rollback-[hash] - Volta para um commit específico"
+echo "monitor     - Monitora alterações continuamente"
